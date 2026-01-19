@@ -236,12 +236,42 @@ const forgotPassword = asyncHandler(async (req, res) => {
     return success(res, null, 'Email reset password telah dikirim');
 });
 
+/**
+ * Request Seller OTP
+ * POST /api/auth/seller/request-otp
+ */
+const requestSellerOtp = asyncHandler(async (req, res) => {
+    const { password } = req.body;
+
+    // User ID dari token (middleware authenticate)
+    await AuthService.requestSellerOtp(req.user.uid, password);
+    return success(res, null, 'Kode verifikasi OTP telah (disimulasikan) dikirim.');
+});
+
+/**
+ * Verify Seller OTP
+ * POST /api/auth/seller/verify-otp
+ */
+const verifySellerOtp = asyncHandler(async (req, res) => {
+    const { otp } = req.body;
+
+    if (!otp) {
+        return badRequest(res, 'Kode OTP wajib diisi');
+    }
+
+    const updatedUser = await AuthService.verifySellerOtp(req.user.uid, otp);
+
+    return success(res, updatedUser.toJSON(), 'Selamat! Akun Anda telah diupgrade menjadi Penjual.');
+});
+
 module.exports = {
     register,
     login,
     googleAuth,
     facebookAuth,
     forgotPassword,
+    requestSellerOtp,
+    verifySellerOtp,
     getProfile,
     updateProfile,
     getAllUsers,

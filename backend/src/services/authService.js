@@ -6,6 +6,7 @@
 const { auth, db } = require('../config/firebase');
 const { COLLECTIONS, USER_ROLES, MESSAGES } = require('../config/constants');
 const User = require('../models/User');
+const Mailer = require('../utils/mailer');
 
 class AuthService {
     /**
@@ -556,6 +557,94 @@ class AuthService {
             await auth.deleteUser(uid);
 
             return true;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Request OTP untuk mendaftar sebagai Penjual
+     */
+    static async requestSellerOtp(uid, password) {
+        try {
+            // 1. Ambil data user
+            const user = await User.getById(uid);
+            if (!user) throw new Error('User tidak ditemukan');
+
+            // 2. Verifikasi Password user (Double check security)
+            await this.login(user.email, password);
+
+            // 3. Generate OTP 4 Digit
+            const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
+            // Expire dalam 10 menit
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+            // 4. Simpan OTP di database user
+            await User.update(uid, {
+                sellerVerification: {
+                    otp: otpCode,
+                    expiresAt: expiresAt,
+                    status: 'pending'
+                }
+            });
+
+            // 5. Kirim OTP via Email
+            await Mailer.sendSellerOtp(user.email, otpCode, user.displayName);
+
+            // Log Backup (untuk development)
+            console.log(`[SELLER OTP DEV] To: ${user.email} | OTP: ${otpCode}`);
+
+            return true;
+        } catch (error) {
+            if (error.message.includes('Email atau password salah') || error.message.includes('INVALID_PASSWORD')) {
+                throw new Error('Password yang Anda masukkan salah.');
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Verifikasi OTP dan Upgrade jadi Penjual
+     */
+    static async verifySellerOtp(uid, otp) {
+        try {
+            const user = await User.getById(uid);
+            if (!user) throw new Error('User tidak ditemukan');
+
+            const verificationData = user.sellerVerification;
+
+            if (!verificationData || !verificationData.otp) {
+                throw new Error('Belum ada permintaan verifikasi OTP');
+            }
+
+            // Cek Expired (Handle Timestamp Firestore)
+            const now = new Date();
+            const expiresAt = verificationData.expiresAt && verificationData.expiresAt.toDate
+                ? verificationData.expiresAt.toDate()
+                : new Date(verificationData.expiresAt);
+
+            if (now > expiresAt) {
+                throw new Error('Kode OTP sudah kadaluarsa. Silakan request ulang.');
+            }
+
+            // Cek Kode
+            if (verificationData.otp !== otp.toString()) {
+                throw new Error('Kode OTP salah');
+            }
+
+            // Sukses! Upgrade Role
+            await User.update(uid, {
+                role: USER_ROLES.SELLER,
+                sellerVerification: null, // Bersihkan OTP
+                updatedAt: new Date()
+            });
+
+            // Set custom claim auth
+            await auth.setCustomUserClaims(uid, { role: USER_ROLES.SELLER });
+
+            // Return user baru
+            const updatedUser = await User.getById(uid);
+            return updatedUser;
         } catch (error) {
             throw error;
         }

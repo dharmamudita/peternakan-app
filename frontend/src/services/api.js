@@ -40,7 +40,10 @@ api.interceptors.response.use(
     (error) => {
         if (error.response) {
             // Server responded with error
-            const message = error.response.data?.message || 'Terjadi kesalahan';
+            const data = error.response.data;
+            const message = data?.message
+                ? `${data.message}${data.error ? `: ${data.error}` : ''}`
+                : 'Terjadi kesalahan';
             return Promise.reject(new Error(message));
         } else if (error.request) {
             // No response received
@@ -58,6 +61,8 @@ export const authApi = {
     googleAuth: (data) => api.post('/auth/google', data),
     facebookAuth: (data) => api.post('/auth/facebook', data),
     forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+    requestSellerOtp: (password) => api.post('/auth/seller/request-otp', { password }),
+    verifySellerOtp: (otp) => api.post('/auth/seller/verify-otp', { otp }),
     getProfile: () => api.get('/auth/me'),
     updateProfile: (data) => api.put('/auth/me', data),
 };

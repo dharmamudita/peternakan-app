@@ -31,6 +31,7 @@ import {
     MarketplaceScreen,
     EducationScreen,
     ProfileScreen,
+    SellerRegistrationScreen,
 } from '../screens';
 
 const Stack = createStackNavigator();
@@ -171,7 +172,10 @@ const AppNavigator = () => {
                 }}
             >
                 {isAuthenticated ? (
-                    <Stack.Screen name="MainTabs" component={MainTabs} />
+                    <>
+                        <Stack.Screen name="MainTabs" component={MainTabs} />
+                        <Stack.Screen name="SellerRegistration" component={SellerRegistrationScreen} />
+                    </>
                 ) : (
                     <Stack.Screen name="Auth" component={AuthStack} />
                 )}

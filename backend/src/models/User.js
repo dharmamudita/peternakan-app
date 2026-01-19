@@ -28,6 +28,7 @@ class User {
         this.createdAt = data.createdAt || new Date();
         this.updatedAt = data.updatedAt || new Date();
         this.lastLoginAt = data.lastLoginAt || null;
+        this.sellerVerification = data.sellerVerification || null;
     }
 
     // Konversi ke objek biasa
@@ -47,6 +48,7 @@ class User {
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
             lastLoginAt: this.lastLoginAt,
+            sellerVerification: this.sellerVerification,
         };
     }
 
@@ -54,6 +56,8 @@ class User {
     toFirestore() {
         const data = this.toJSON();
         delete data.id;
+        // Opsional: Validasi atau filter sellerVerification jika tidak ingin disimpan permanen
+        // Namun untuk kasus ini kita butuh simpan di Firestore
         return data;
     }
 

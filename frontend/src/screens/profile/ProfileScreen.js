@@ -30,7 +30,22 @@ const ProfileScreen = ({ navigation }) => {
         // Navigation will be handled by AppNavigator automatically via auth state
     };
 
+    const isSeller = user?.role === 'seller';
+
     const menuItems = [
+        {
+            title: isSeller ? 'Toko Saya' : 'Bisnis',
+            items: isSeller ? [
+                { icon: 'storefront-outline', label: 'Dashboard Toko', action: () => alert('Dashboard Penjual akan segera hadir!') },
+                { icon: 'pricetags-outline', label: 'Kelola Produk', action: () => alert('Manajemen Produk akan segera hadir!') },
+            ] : [
+                {
+                    icon: 'id-card-outline',
+                    label: 'Daftar sebagai Penjual',
+                    action: () => navigation.navigate('SellerRegistration')
+                },
+            ]
+        },
         {
             title: 'Pengaturan Akun',
             items: [
