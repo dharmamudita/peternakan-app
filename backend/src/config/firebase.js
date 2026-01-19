@@ -1,6 +1,7 @@
 /**
  * Firebase Admin SDK Configuration
  * Konfigurasi untuk menghubungkan backend dengan Firebase
+ * Note: Storage menggunakan Cloudinary (gratis), bukan Firebase Storage
  */
 
 const admin = require('firebase-admin');
@@ -22,14 +23,14 @@ const initializeFirebase = () => {
       client_email: process.env.FIREBASE_CLIENT_EMAIL,
     };
 
-    // Inisialisasi Firebase Admin
+    // Inisialisasi Firebase Admin (tanpa storage - pakai Cloudinary)
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       databaseURL: process.env.FIREBASE_DATABASE_URL,
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
 
     console.log('✅ Firebase Admin SDK berhasil diinisialisasi');
+    console.log('📦 Storage: Cloudinary (free tier)');
     return admin.app();
   } catch (error) {
     console.error('❌ Gagal menginisialisasi Firebase:', error.message);
@@ -43,12 +44,10 @@ initializeFirebase();
 // Export services
 const db = admin.firestore();
 const auth = admin.auth();
-const storage = admin.storage();
 
 module.exports = {
   admin,
   db,
   auth,
-  storage,
   initializeFirebase,
 };
