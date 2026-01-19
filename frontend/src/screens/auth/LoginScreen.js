@@ -1,8 +1,3 @@
-/**
- * Login Screen
- * Screen login dengan animasi menarik
- */
-
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -19,9 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
     FadeInDown,
     FadeInUp,
-    useSharedValue,
-    useAnimatedStyle,
-    withSpring,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, GRADIENTS, SIZES, SHADOWS } from '../../constants/theme';
@@ -47,6 +39,40 @@ const LoginScreen = ({ navigation }) => {
 
     // Facebook Auth Hook
     const { request: fbRequest, response: fbResponse, promptAsync: fbPromptAsync, loading: facebookAuthLoading } = useFacebookAuth();
+
+    // Helper untuk Alert yang support Web & Mobile
+    const showAlert = (title, message) => {
+        if (Platform.OS === 'web') {
+            window.alert(`${title}\n\n${message}`);
+        } else {
+            Alert.alert(title, message);
+        }
+    };
+
+    const handleForgotPassword = async () => {
+        if (!email) {
+            showAlert('Email Diperlukan', 'Silakan masukkan alamat email Anda di kolom email di atas, lalu tekan "Lupa Password?" lagi.');
+            setErrors({ ...errors, email: 'Masukkan email untuk reset password' });
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await authApi.forgotPassword(email);
+            showAlert(
+                'Email Terkirim',
+                `Link reset password telah dikirim ke ${email}. Silakan cek inbox atau folder spam Anda.`
+            );
+            setErrors({});
+        } catch (error) {
+            console.error('Forgot password error:', error);
+            const errorMessage = error.message || 'Gagal mengirim email reset password';
+            showAlert('Gagal', errorMessage);
+            setErrors({ general: errorMessage });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Handle Google Auth Response
     useEffect(() => {
@@ -297,7 +323,11 @@ const LoginScreen = ({ navigation }) => {
                             leftIcon={<Ionicons name="lock-closed-outline" size={20} color={COLORS.gray} />}
                         />
 
-                        <TouchableOpacity style={styles.forgotPassword}>
+                        <TouchableOpacity
+                            style={styles.forgotPassword}
+                            onPress={handleForgotPassword}
+                            disabled={loading}
+                        >
                             <Text style={styles.forgotPasswordText}>Lupa Password?</Text>
                         </TouchableOpacity>
 

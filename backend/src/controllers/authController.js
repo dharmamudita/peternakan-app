@@ -220,11 +220,28 @@ const deleteUser = asyncHandler(async (req, res) => {
     return success(res, null, 'User berhasil dihapus');
 });
 
+/**
+ * Forgot Password
+ * POST /api/auth/forgot-password
+ */
+const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return badRequest(res, 'Email wajib diisi');
+    }
+
+    await AuthService.forgotPassword(email);
+
+    return success(res, null, 'Email reset password telah dikirim');
+});
+
 module.exports = {
     register,
     login,
     googleAuth,
     facebookAuth,
+    forgotPassword,
     getProfile,
     updateProfile,
     getAllUsers,

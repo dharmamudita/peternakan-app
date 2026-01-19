@@ -13,6 +13,7 @@ router.post('/register', validate(schemas.register), authController.register);
 router.post('/login', authController.login);
 router.post('/google', authController.googleAuth);
 router.post('/facebook', authController.facebookAuth);
+router.post('/forgot-password', authController.forgotPassword);
 
 // Protected routes
 router.get('/me', authenticate, authController.getProfile);

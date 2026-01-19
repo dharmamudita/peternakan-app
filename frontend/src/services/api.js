@@ -57,6 +57,7 @@ export const authApi = {
     login: (data) => api.post('/auth/login', data),
     googleAuth: (data) => api.post('/auth/google', data),
     facebookAuth: (data) => api.post('/auth/facebook', data),
+    forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
     getProfile: () => api.get('/auth/me'),
     updateProfile: (data) => api.put('/auth/me', data),
 };

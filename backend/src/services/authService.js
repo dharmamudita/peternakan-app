@@ -375,6 +375,80 @@ class AuthService {
     }
 
     /**
+     * Kirim email reset password dengan Rate Limiting (Maks 3x/hari)
+     */
+    static async forgotPassword(email) {
+        try {
+            // 1. Cek User & Rate Limit di Firestore
+            const usersRef = db.collection(COLLECTIONS.USERS);
+            const snapshot = await usersRef.where('email', '==', email).limit(1).get();
+
+            if (snapshot.empty) {
+                // Return error agar user tahu email salah (bisa diubah return true palsu untuk security thd enumerasi)
+                // Tapi untuk UX saat ini kita kasih feedback jujur dulu.
+                throw new Error('Email tidak terdaftar');
+            }
+
+            const userDoc = snapshot.docs[0];
+            const userData = userDoc.data();
+            const uid = userDoc.id;
+
+            const now = new Date();
+            // Handle Firestore Timestamp atau Date
+            const lastRequest = userData.lastResetRequest && userData.lastResetRequest.toDate
+                ? userData.lastResetRequest.toDate()
+                : (userData.lastResetRequest ? new Date(userData.lastResetRequest) : null);
+
+            let dailyCount = userData.resetRequestCount || 0;
+
+            // Reset counter jika hari sudah berganti (dibandingkan request terakhir)
+            if (lastRequest && lastRequest.toDateString() !== now.toDateString()) {
+                dailyCount = 0;
+            }
+
+            if (dailyCount >= 3) {
+                throw new Error('Anda telah mencapai batas reset password (3x). Silakan coba lagi besok.');
+            }
+
+            // 2. Kirim Email via Firebase API
+            const apiKey = process.env.FIREBASE_WEB_API_KEY;
+            if (!apiKey) {
+                throw new Error("Server Error: Konfigurasi API Key belum lengkap");
+            }
+
+            const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    requestType: 'PASSWORD_RESET',
+                    email: email
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const msg = data.error?.message || 'Gagal mengirim email reset password';
+                if (msg.includes('EMAIL_NOT_FOUND')) {
+                    // Inkonsistensi data DB vs Auth
+                    throw new Error('Email tidak terdaftar di Auth Provider');
+                }
+                throw new Error('Gagal memproses permintaan reset password');
+            }
+
+            // 3. Update limit di Database (Increment counter)
+            await usersRef.doc(uid).update({
+                lastResetRequest: now,
+                resetRequestCount: dailyCount + 1
+            });
+
+            return true;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Update profil user
      */
     static async updateProfile(uid, updateData) {
