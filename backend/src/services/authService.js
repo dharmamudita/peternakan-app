@@ -112,6 +112,102 @@ class AuthService {
     }
 
     /**
+     * Facebook Sign-In / Login
+     * Menerima data dari Facebook OAuth dan membuat/login user
+     */
+    static async facebookLogin(facebookData) {
+        try {
+            const { facebookId, email, displayName, photoURL, accessToken } = facebookData;
+
+            // Cari user berdasarkan email atau facebookId
+            const usersRef = db.collection(COLLECTIONS.USERS);
+            let snapshot = await usersRef.where('email', '==', email).limit(1).get();
+
+            // Jika tidak ditemukan via email, coba cari via facebookId
+            if (snapshot.empty) {
+                snapshot = await usersRef.where('facebookId', '==', facebookId).limit(1).get();
+            }
+
+            let user;
+            let userUid;
+
+            if (snapshot.empty) {
+                // User belum ada, buat baru
+                try {
+                    // Coba buat user di Firebase Auth
+                    const userRecord = await auth.createUser({
+                        uid: `fb_${facebookId}`,
+                        email,
+                        displayName,
+                        photoURL,
+                        emailVerified: true,
+                        disabled: false,
+                    });
+                    userUid = userRecord.uid;
+                } catch (authError) {
+                    if (authError.code === 'auth/uid-already-exists') {
+                        // UID sudah ada di Auth, gunakan itu
+                        userUid = `fb_${facebookId}`;
+                    } else if (authError.code === 'auth/email-already-exists') {
+                        // Email sudah ada di Auth tapi tidak di Firestore
+                        // Ambil user dari Auth
+                        const existingUser = await auth.getUserByEmail(email);
+                        userUid = existingUser.uid;
+                    } else {
+                        throw authError;
+                    }
+                }
+
+                // Buat user di Firestore
+                user = await User.createWithId(userUid, {
+                    uid: userUid,
+                    email,
+                    displayName,
+                    photoURL,
+                    facebookId,
+                    role: USER_ROLES.USER,
+                    isVerified: true,
+                    isActive: true,
+                    authProvider: 'facebook',
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                });
+            } else {
+                // User sudah ada, update info jika perlu
+                const doc = snapshot.docs[0];
+                user = new User({ id: doc.id, ...doc.data() });
+                userUid = user.id;
+
+                // Update data terbaru dari Facebook
+                await User.update(userUid, {
+                    displayName: displayName || user.displayName,
+                    photoURL: photoURL || user.photoURL,
+                    facebookId: facebookId,
+                    updatedAt: new Date(),
+                });
+
+                // Refresh user data
+                user = await User.getById(userUid);
+            }
+
+            if (!user.isActive) {
+                throw new Error('Akun tidak aktif');
+            }
+
+            // Update last login
+            await User.updateLastLogin(userUid);
+
+            // Generate custom token untuk user
+            const token = await auth.createCustomToken(userUid);
+
+            return { user, token };
+        } catch (error) {
+            console.error('Facebook login error:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Google Sign-In / Login
      * Menerima data dari Google OAuth dan membuat/login user
      */

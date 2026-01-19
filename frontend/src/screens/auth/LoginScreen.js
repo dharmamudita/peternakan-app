@@ -29,6 +29,7 @@ import { Button, Input } from '../../components/common';
 import { authApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useGoogleAuth, processGoogleAuthResponse } from '../../services/googleAuth';
+import { useFacebookAuth, processFacebookAuthResponse } from '../../services/facebookAuth';
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,10 +39,14 @@ const LoginScreen = ({ navigation }) => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
+    const [facebookLoading, setFacebookLoading] = useState(false);
     const [errors, setErrors] = useState({});
 
     // Google Auth Hook
     const { request, response, promptAsync, loading: googleAuthLoading } = useGoogleAuth();
+
+    // Facebook Auth Hook
+    const { request: fbRequest, response: fbResponse, promptAsync: fbPromptAsync, loading: facebookAuthLoading } = useFacebookAuth();
 
     // Handle Google Auth Response
     useEffect(() => {
@@ -49,6 +54,13 @@ const LoginScreen = ({ navigation }) => {
             handleGoogleResponse(response);
         }
     }, [response]);
+
+    // Handle Facebook Auth Response
+    useEffect(() => {
+        if (fbResponse) {
+            handleFacebookResponse(fbResponse);
+        }
+    }, [fbResponse]);
 
     const handleGoogleResponse = async (response) => {
         if (response?.type === 'success') {
@@ -98,6 +110,83 @@ const LoginScreen = ({ navigation }) => {
         } catch (error) {
             console.error('Google prompt error:', error);
             setErrors({ general: 'Gagal membuka Google Sign-In' });
+        }
+    };
+
+    const handleFacebookResponse = async (response) => {
+        if (response?.type === 'success') {
+            setFacebookLoading(true);
+            setErrors({});
+
+            try {
+                const result = await processFacebookAuthResponse(response);
+
+                if (result && (result.success || result.token)) {
+                    const token = result.token || result.data?.token;
+                    const user = result.user || result.data?.user;
+
+                    if (token && user) {
+                        await login(token, user);
+                        navigation.replace('MainTabs');
+                        return;
+                    }
+                }
+
+                throw new Error('Gagal login dengan Facebook');
+            } catch (error) {
+                console.error('Facebook login error:', error);
+                setErrors({ general: error.message || 'Gagal login dengan Facebook' });
+            } finally {
+                setFacebookLoading(false);
+            }
+        } else if (response?.type === 'cancel') {
+            // User cancelled, no error needed
+        } else if (response?.type === 'error') {
+            setErrors({ general: response.error?.message || 'Terjadi kesalahan saat login Facebook' });
+        }
+    };
+
+    const handleFacebookLogin = async () => {
+        // Khusus Web: Gunakan Popup flow untuk menghindari error session storage
+        if (Platform.OS === 'web') {
+            try {
+                setFacebookLoading(true);
+                const { loginWithFacebookPopup } = require('../../services/facebookAuth');
+                const result = await loginWithFacebookPopup();
+
+                if (result && (result.success || result.token)) {
+                    const token = result.token || result.data?.token;
+                    const user = result.user || result.data?.user;
+
+                    if (token && user) {
+                        await login(token, user);
+                        navigation.replace('MainTabs');
+                    }
+                }
+            } catch (error) {
+                console.error('Facebook popup error:', error);
+                setErrors({ general: error.message || 'Gagal login dengan Facebook' });
+            } finally {
+                setFacebookLoading(false);
+            }
+            return;
+        }
+
+        // Native (Android/iOS): Gunakan Expo Auth Session
+        if (!fbRequest) {
+            Alert.alert(
+                'Konfigurasi Diperlukan',
+                'Facebook Sign-In belum dikonfigurasi. Silakan isi Facebook App ID di file firebase.js',
+                [{ text: 'OK' }]
+            );
+            return;
+        }
+
+        try {
+            await fbPromptAsync();
+        } catch (error) {
+            console.error('Facebook prompt error:', error);
+            setErrors({ general: 'Gagal membuka Facebook Sign-In' });
         }
     };
 
@@ -243,6 +332,23 @@ const LoginScreen = ({ navigation }) => {
                                             <Text style={styles.googleIcon}>G</Text>
                                         </View>
                                         <Text style={styles.googleButtonText}>Masuk dengan Google</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.facebookButton, (facebookLoading || facebookAuthLoading) && styles.disabledButton]}
+                                onPress={handleFacebookLogin}
+                                disabled={facebookLoading || facebookAuthLoading}
+                            >
+                                {facebookLoading ? (
+                                    <Text style={styles.facebookButtonText}>Loading...</Text>
+                                ) : (
+                                    <>
+                                        <View style={styles.facebookIconContainer}>
+                                            <Ionicons name="logo-facebook" size={20} color="#ffffff" />
+                                        </View>
+                                        <Text style={styles.facebookButtonText}>Masuk dengan Facebook</Text>
                                     </>
                                 )}
                             </TouchableOpacity>
@@ -405,6 +511,31 @@ const styles = StyleSheet.create({
         fontSize: SIZES.body,
         fontWeight: '600',
         color: COLORS.text,
+    },
+    facebookButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#1877F2',
+        paddingVertical: 14,
+        paddingHorizontal: 24,
+        borderRadius: SIZES.radius,
+        width: '100%',
+        ...SHADOWS.small,
+    },
+    facebookIconContainer: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: 'transparent',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    facebookButtonText: {
+        fontSize: SIZES.body,
+        fontWeight: '600',
+        color: '#ffffff',
     },
     disabledButton: {
         opacity: 0.6,

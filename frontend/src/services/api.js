@@ -56,6 +56,7 @@ export const authApi = {
     register: (data) => api.post('/auth/register', data),
     login: (data) => api.post('/auth/login', data),
     googleAuth: (data) => api.post('/auth/google', data),
+    facebookAuth: (data) => api.post('/auth/facebook', data),
     getProfile: () => api.get('/auth/me'),
     updateProfile: (data) => api.put('/auth/me', data),
 };

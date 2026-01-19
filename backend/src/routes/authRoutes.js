@@ -12,6 +12,7 @@ const { authenticate, adminOnly, validate, schemas } = require('../middlewares')
 router.post('/register', validate(schemas.register), authController.register);
 router.post('/login', authController.login);
 router.post('/google', authController.googleAuth);
+router.post('/facebook', authController.facebookAuth);
 
 // Protected routes
 router.get('/me', authenticate, authController.getProfile);

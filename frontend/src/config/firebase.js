@@ -25,3 +25,10 @@ export const ANDROID_CLIENT_ID = '967552027700-f92njk2ho22b90gmlhumhpc2r35jdb5t.
 
 // iOS Client ID (sama dengan Web untuk Expo managed workflow)
 export const IOS_CLIENT_ID = '967552027700-f92njk2ho22b90gmlhumhpc2r35jdb5t.apps.googleusercontent.com';
+
+// Facebook App ID - Dari Meta Developer Console
+export const FACEBOOK_APP_ID = '817973851255832';
+
+// Firebase Auth Handler untuk OAuth redirect
+export const FIREBASE_AUTH_HANDLER = 'https://peternakan-b3e94.firebaseapp.com/__/auth/handler';
+

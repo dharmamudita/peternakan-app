@@ -91,6 +91,33 @@ const googleAuth = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Facebook Sign-In Authentication
+ * POST /api/auth/facebook
+ */
+const facebookAuth = asyncHandler(async (req, res) => {
+    const { facebookId, email, displayName, photoURL, accessToken } = req.body;
+
+    if (!email || !facebookId) {
+        return badRequest(res, 'Data Facebook tidak valid');
+    }
+
+    const result = await AuthService.facebookLogin({
+        facebookId,
+        email,
+        displayName,
+        photoURL,
+        accessToken,
+    });
+
+    const { user, token } = result;
+
+    return success(res, {
+        user: user.toJSON(),
+        token
+    }, 'Login Facebook berhasil');
+});
+
+/**
  * Get current user profile
  * GET /api/auth/me
  */
@@ -197,6 +224,7 @@ module.exports = {
     register,
     login,
     googleAuth,
+    facebookAuth,
     getProfile,
     updateProfile,
     getAllUsers,
