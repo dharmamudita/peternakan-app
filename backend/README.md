@@ -48,7 +48,7 @@ backend/
 - **Framework**: Express.js
 - **Database**: Firebase Firestore
 - **Authentication**: Firebase Auth
-- **Storage**: Firebase Storage
+- **Storage**: Cloudinary (Free Tier)
 - **File Upload**: Multer
 
 ## ⚙️ Instalasi
@@ -62,25 +62,35 @@ backend/
 
 3. Konfigurasi Firebase:
    - Buat project di [Firebase Console](https://console.firebase.google.com)
-   - Enable Firestore, Authentication, dan Storage
+   - Enable **Firestore** dan **Authentication**
    - Download service account key dari Project Settings > Service Accounts
    - Copy nilai-nilai ke file `.env`
 
-4. Setup environment variables:
+4. Konfigurasi Cloudinary (Free Storage):
+   - Daftar gratis di [Cloudinary](https://cloudinary.com)
+   - Dapatkan Cloud Name, API Key, dan API Secret dari Dashboard
+   - Copy nilai-nilai ke file `.env`
+
+5. Setup environment variables:
    ```bash
    cp .env.example .env
    ```
    
-   Edit `.env` dengan kredensial Firebase Anda:
+   Edit `.env` dengan kredensial Anda:
    ```
+   # Firebase
    FIREBASE_PROJECT_ID=your-project-id
    FIREBASE_CLIENT_EMAIL=your-client-email@project.iam.gserviceaccount.com
    FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
    FIREBASE_DATABASE_URL=https://your-project-id.firebaseio.com
-   FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+
+   # Cloudinary (Free Storage)
+   CLOUDINARY_CLOUD_NAME=your-cloud-name
+   CLOUDINARY_API_KEY=your-api-key
+   CLOUDINARY_API_SECRET=your-api-secret
    ```
 
-5. Jalankan server:
+6. Jalankan server:
    ```bash
    # Development
    npm run dev
