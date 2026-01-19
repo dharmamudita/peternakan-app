@@ -13,6 +13,7 @@ import {
     ScrollView,
     TouchableOpacity,
     Dimensions,
+    Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -22,6 +23,7 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, GRADIENTS, SIZES, SHADOWS } from '../../constants/theme';
 import { Button, Input } from '../../components/common';
+import { useAuth } from '../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +38,8 @@ const RegisterScreen = ({ navigation }) => {
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [acceptTerms, setAcceptTerms] = useState(false);
+
+    const { register } = useAuth();
 
     const handleChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -89,13 +93,26 @@ const RegisterScreen = ({ navigation }) => {
         setErrors({});
 
         try {
-            // TODO: Integrate with Firebase Auth
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const response = await register(formData);
 
-            // Navigate to login after successful registration
-            navigation.replace('Login');
+            if (response.success) {
+                // Di React Native Web, Alert mungkin standard browser alert
+                if (Platform.OS === 'web') {
+                    window.alert('Registrasi berhasil! Silakan login.');
+                    navigation.replace('Login');
+                } else {
+                    Alert.alert(
+                        'Registrasi Berhasil',
+                        'Akun Anda telah dibuat. Silakan login untuk melanjutkan.',
+                        [{ text: 'OK', onPress: () => navigation.replace('Login') }]
+                    );
+                }
+            } else {
+                throw new Error(response.error || 'Gagal membuat akun');
+            }
         } catch (error) {
-            setErrors({ general: error.message });
+            console.error('Register error:', error);
+            setErrors({ general: error.message || 'Terjadi kesalahan saat registrasi' });
         } finally {
             setLoading(false);
         }

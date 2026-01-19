@@ -1,47 +1,46 @@
-/**
- * Firebase Admin SDK Configuration
- * Konfigurasi untuk menghubungkan backend dengan Firebase
- * Note: Storage menggunakan Cloudinary (gratis), bukan Firebase Storage
- */
-
 const admin = require('firebase-admin');
 require('dotenv').config();
 
-// Inisialisasi Firebase Admin SDK
-const initializeFirebase = () => {
-  try {
-    // Cek apakah sudah diinisialisasi
-    if (admin.apps.length > 0) {
-      return admin.app();
-    }
+console.log('🔥 Initializing Firebase (Simple Mode)...');
 
-    // Konfigurasi service account dari environment variables
-    const serviceAccount = {
-      type: 'service_account',
+// Coba metode paling dasar: require file JSON
+let serviceAccount;
+try {
+  serviceAccount = require('./serviceAccountKey.json');
+  console.log('✅ Loaded serviceAccountKey.json');
+} catch (e) {
+  console.log('⚠️ serviceAccountKey.json not found, verifying ENV...');
+}
+
+// Fallback ENV
+if (!serviceAccount) {
+  const envKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (envKey) {
+    serviceAccount = {
       project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      private_key: envKey.replace(/\\n/g, '\n')
     };
+  }
+}
 
-    // Inisialisasi Firebase Admin (tanpa storage - pakai Cloudinary)
+if (!serviceAccount) {
+  throw new Error('Firebase credentials missing');
+}
+
+if (admin.apps.length === 0) {
+  try {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      databaseURL: process.env.FIREBASE_DATABASE_URL,
+      databaseURL: process.env.FIREBASE_DATABASE_URL
     });
-
-    console.log('✅ Firebase Admin SDK berhasil diinisialisasi');
-    console.log('📦 Storage: Cloudinary (free tier)');
-    return admin.app();
+    console.log('🚀 Firebase Admin Initialized Successfully');
   } catch (error) {
-    console.error('❌ Gagal menginisialisasi Firebase:', error.message);
+    console.error('❌ Firebase Init Error:', error.message);
     throw error;
   }
-};
+}
 
-// Inisialisasi Firebase
-initializeFirebase();
-
-// Export services
 const db = admin.firestore();
 const auth = admin.auth();
 
@@ -49,5 +48,4 @@ module.exports = {
   admin,
   db,
   auth,
-  initializeFirebase,
 };

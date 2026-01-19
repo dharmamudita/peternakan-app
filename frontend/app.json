@@ -3,6 +3,7 @@
     "name": "Peternakan App",
     "slug": "peternakan-app",
     "version": "1.0.0",
+    "scheme": "peternakan-app",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

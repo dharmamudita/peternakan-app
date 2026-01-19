@@ -3,7 +3,7 @@
  * Screen login dengan animasi menarik
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -13,6 +13,7 @@ import {
     ScrollView,
     TouchableOpacity,
     Dimensions,
+    Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -25,7 +26,9 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, GRADIENTS, SIZES, SHADOWS } from '../../constants/theme';
 import { Button, Input } from '../../components/common';
+import { authApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useGoogleAuth, processGoogleAuthResponse } from '../../services/googleAuth';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,7 +37,69 @@ const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [errors, setErrors] = useState({});
+
+    // Google Auth Hook
+    const { request, response, promptAsync, loading: googleAuthLoading } = useGoogleAuth();
+
+    // Handle Google Auth Response
+    useEffect(() => {
+        if (response) {
+            handleGoogleResponse(response);
+        }
+    }, [response]);
+
+    const handleGoogleResponse = async (response) => {
+        if (response?.type === 'success') {
+            setGoogleLoading(true);
+            setErrors({});
+
+            try {
+                const result = await processGoogleAuthResponse(response);
+
+                if (result && (result.success || result.token)) {
+                    const token = result.token || result.data?.token;
+                    const user = result.user || result.data?.user;
+
+                    if (token && user) {
+                        await login(token, user);
+                        navigation.replace('MainTabs');
+                        return;
+                    }
+                }
+
+                throw new Error('Gagal login dengan Google');
+            } catch (error) {
+                console.error('Google login error:', error);
+                setErrors({ general: error.message || 'Gagal login dengan Google' });
+            } finally {
+                setGoogleLoading(false);
+            }
+        } else if (response?.type === 'cancel') {
+            // User cancelled, no error needed
+        } else if (response?.type === 'error') {
+            setErrors({ general: response.error?.message || 'Terjadi kesalahan saat login Google' });
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        if (!request) {
+            Alert.alert(
+                'Konfigurasi Diperlukan',
+                'Google Sign-In belum dikonfigurasi. Silakan isi Google Client ID di file firebase.js',
+                [{ text: 'OK' }]
+            );
+            return;
+        }
+
+        try {
+            await promptAsync();
+        } catch (error) {
+            console.error('Google prompt error:', error);
+            setErrors({ general: 'Gagal membuka Google Sign-In' });
+        }
+    };
 
     const handleLogin = async () => {
         // Validate
@@ -51,23 +116,24 @@ const LoginScreen = ({ navigation }) => {
         setErrors({});
 
         try {
-            // TODO: Integrate with Firebase Auth
-            // For now, simulate login
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const response = await authApi.login({ email, password });
 
-            // Mock successful login
-            const mockToken = 'mock-token-123';
-            const mockUser = {
-                id: '1',
-                email,
-                displayName: 'User Demo',
-                role: 'farmer',
-            };
+            if (response.success || response.token) {
+                // Handle different response structures (just in case)
+                const token = response.token || response.data?.token;
+                const user = response.user || response.data?.user;
 
-            await login(mockToken, mockUser);
-            navigation.replace('MainTabs');
+                if (token && user) {
+                    await login(token, user);
+                    navigation.replace('MainTabs');
+                    return;
+                }
+            }
+
+            throw new Error(response.message || 'Login gagal. Silakan periksa email dan password Anda.');
         } catch (error) {
-            setErrors({ general: error.message });
+            console.error('Login error:', error);
+            setErrors({ general: error.message || 'Gagal terhubung ke server' });
         } finally {
             setLoading(false);
         }
@@ -164,14 +230,21 @@ const LoginScreen = ({ navigation }) => {
 
                         {/* Social Login */}
                         <View style={styles.socialButtons}>
-                            <TouchableOpacity style={styles.socialButton}>
-                                <Text style={styles.socialIcon}>🇬</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.socialButton}>
-                                <Ionicons name="logo-apple" size={24} color={COLORS.text} />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.socialButton}>
-                                <Ionicons name="logo-facebook" size={24} color="#1877F2" />
+                            <TouchableOpacity
+                                style={[styles.googleButton, (googleLoading || googleAuthLoading) && styles.disabledButton]}
+                                onPress={handleGoogleLogin}
+                                disabled={googleLoading || googleAuthLoading}
+                            >
+                                {googleLoading ? (
+                                    <Text style={styles.googleButtonText}>Loading...</Text>
+                                ) : (
+                                    <>
+                                        <View style={styles.googleIconContainer}>
+                                            <Text style={styles.googleIcon}>G</Text>
+                                        </View>
+                                        <Text style={styles.googleButtonText}>Masuk dengan Google</Text>
+                                    </>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </Animated.View>
@@ -297,9 +370,44 @@ const styles = StyleSheet.create({
         fontSize: SIZES.bodySmall,
     },
     socialButtons: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 12,
+    },
+    googleButton: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'center',
-        gap: 16,
+        backgroundColor: COLORS.white,
+        paddingVertical: 14,
+        paddingHorizontal: 24,
+        borderRadius: SIZES.radius,
+        width: '100%',
+        borderWidth: 1,
+        borderColor: COLORS.lightGray,
+        ...SHADOWS.small,
+    },
+    googleIconContainer: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    googleIcon: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#4285F4',
+    },
+    googleButtonText: {
+        fontSize: SIZES.body,
+        fontWeight: '600',
+        color: COLORS.text,
+    },
+    disabledButton: {
+        opacity: 0.6,
     },
     socialButton: {
         width: 56,

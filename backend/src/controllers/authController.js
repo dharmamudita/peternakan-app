@@ -13,15 +13,21 @@ const { parsePagination, parseFilters } = require('../utils/helpers');
  * POST /api/auth/register
  */
 const register = asyncHandler(async (req, res) => {
-    const { uid, email, displayName, phoneNumber, role } = req.body;
+    const { uid, email, password, displayName, phoneNumber, role } = req.body;
 
-    if (!uid || !email) {
-        return badRequest(res, 'UID dan email wajib diisi');
+    // Validasi: Harus ada Email. Dan harus ada (UID ATAU Password).
+    // Jika dari client SDK -> UID. Jika register murni backend -> Password.
+    if (!email) {
+        return badRequest(res, 'Email wajib diisi');
+    }
+    if (!uid && !password) {
+        return badRequest(res, 'Password wajib diisi (atau UID jika via client SDK)');
     }
 
     const user = await AuthService.registerUser({
         uid,
         email,
+        password,
         displayName,
         phoneNumber,
         role,
@@ -35,14 +41,53 @@ const register = asyncHandler(async (req, res) => {
  * POST /api/auth/login
  */
 const login = asyncHandler(async (req, res) => {
-    const { uid } = req.body;
+    const { uid, email, password } = req.body;
 
-    if (!uid) {
-        return badRequest(res, 'UID wajib diisi');
+    let loginResult;
+
+    if (email && password) {
+        // Login dengan Email & Password
+        loginResult = await AuthService.login(email, password);
+    } else if (uid) {
+        // Login dengan UID (Legacy/Client SDK)
+        loginResult = await AuthService.login(uid);
+    } else {
+        return badRequest(res, 'Email dan Password wajib diisi');
     }
 
-    const user = await AuthService.login(uid);
-    return success(res, user.toJSON(), 'Login berhasil');
+    const { user, token } = loginResult;
+
+    return success(res, {
+        user: user.toJSON(),
+        token
+    }, 'Login berhasil');
+});
+
+/**
+ * Google Sign-In Authentication
+ * POST /api/auth/google
+ */
+const googleAuth = asyncHandler(async (req, res) => {
+    const { googleId, email, displayName, photoURL, idToken } = req.body;
+
+    if (!email || !googleId) {
+        return badRequest(res, 'Data Google tidak valid');
+    }
+
+    const result = await AuthService.googleLogin({
+        googleId,
+        email,
+        displayName,
+        photoURL,
+        idToken,
+    });
+
+    const { user, token } = result;
+
+    return success(res, {
+        user: user.toJSON(),
+        token
+    }, 'Login Google berhasil');
 });
 
 /**
@@ -151,6 +196,7 @@ const deleteUser = asyncHandler(async (req, res) => {
 module.exports = {
     register,
     login,
+    googleAuth,
     getProfile,
     updateProfile,
     getAllUsers,
