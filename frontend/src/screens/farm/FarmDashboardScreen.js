@@ -1,48 +1,37 @@
 /**
- * Farm Dashboard Screen
- * Halaman manajemen peternakan dengan tema putih + coklat
+ * Farm Dashboard Screen - Fitur Lengkap
+ * Manajemen peternakan dengan CRUD hewan
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    Dimensions,
+    View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
+    RefreshControl, ActivityIndicator, Alert, Platform, Modal, TextInput
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, FadeInRight, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { ANIMAL_TYPES } from '../../constants';
+import { animalApi, farmApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 const FarmDashboardScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
+    const { user } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [animals, setAnimals] = useState([]);
+    const [stats, setStats] = useState({ total: 0, healthy: 0, sick: 0, pregnant: 0 });
     const [selectedFilter, setSelectedFilter] = useState('all');
-
-    const stats = [
-        { title: 'Total Hewan', value: '24', icon: 'paw', color: '#964b00', bgColor: '#faf8f5', trend: '+3' },
-        { title: 'Kondisi Sakit', value: '2', icon: 'medkit', color: '#dc2626', bgColor: '#fef2f2', trend: '-1' },
-        { title: 'Sedang Hamil', value: '4', icon: 'heart', color: '#7c3f06', bgColor: '#faf8f5', trend: '+2' },
-        { title: 'Anakan Baru', value: '8', icon: 'egg', color: '#b87333', bgColor: '#fdf5ef', trend: '+5' },
-    ];
-
-    const quickActions = [
-        { id: 1, title: 'Catat Kesehatan', icon: 'medical', gradient: ['#964b00', '#7c3f06'] },
-        { id: 2, title: 'Jadwal Pakan', icon: 'time', gradient: ['#7c3f06', '#5d3a1a'] },
-        { id: 3, title: 'Panen', icon: 'basket', gradient: ['#b87333', '#964b00'] },
-    ];
-
-    const animals = [
-        { id: '1', name: 'Brahma 01', type: 'CATTLE', status: 'Sehat', age: '2 Tahun', weight: '450kg', lastCheck: '2 hari lalu' },
-        { id: '2', name: 'Etawa 05', type: 'GOAT', status: 'Sakit', age: '1 Tahun', weight: '45kg', lastCheck: '1 hari lalu' },
-        { id: '3', name: 'Petelur 100', type: 'CHICKEN', status: 'Sehat', age: '6 Bulan', weight: '2kg', lastCheck: '3 hari lalu' },
-    ];
+    const [modalVisible, setModalVisible] = useState(false);
+    const [newAnimal, setNewAnimal] = useState({
+        name: '', type: 'CATTLE', breed: '', gender: 'male', weight: '', notes: ''
+    });
+    const [saving, setSaving] = useState(false);
 
     const filters = [
         { id: 'all', label: 'Semua' },
@@ -51,536 +40,444 @@ const FarmDashboardScreen = ({ navigation }) => {
         { id: 'pregnant', label: 'Hamil' },
     ];
 
+    const animalTypes = [
+        { id: 'CATTLE', label: 'Sapi', icon: '🐄' },
+        { id: 'GOAT', label: 'Kambing', icon: '🐐' },
+        { id: 'SHEEP', label: 'Domba', icon: '🐑' },
+        { id: 'CHICKEN', label: 'Ayam', icon: '🐔' },
+        { id: 'DUCK', label: 'Bebek', icon: '🦆' },
+        { id: 'OTHER', label: 'Lainnya', icon: '🐾' },
+    ];
+
+    const loadData = useCallback(async () => {
+        try {
+            const [animalsRes, statsRes] = await Promise.all([
+                animalApi.getMyAnimals(),
+                animalApi.getStats(),
+            ]);
+            setAnimals(animalsRes?.data || animalsRes || []);
+            if (statsRes) {
+                setStats({
+                    total: statsRes.total || 0,
+                    healthy: statsRes.byHealthStatus?.healthy || 0,
+                    sick: statsRes.byHealthStatus?.sick || 0,
+                    pregnant: statsRes.byHealthStatus?.pregnant || 0,
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load data:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useEffect(() => { loadData(); }, [loadData]);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        loadData();
+    };
+
+    const showAlert = (title, message) => {
+        if (Platform.OS === 'web') { window.alert(`${title}\n\n${message}`); }
+        else { Alert.alert(title, message); }
+    };
+
+    const handleAddAnimal = async () => {
+        if (!newAnimal.name.trim()) {
+            showAlert('Error', 'Nama hewan wajib diisi');
+            return;
+        }
+        setSaving(true);
+        try {
+            await animalApi.create({
+                ...newAnimal,
+                weight: parseFloat(newAnimal.weight) || 0,
+                healthStatus: 'healthy',
+            });
+            setModalVisible(false);
+            setNewAnimal({ name: '', type: 'CATTLE', breed: '', gender: 'male', weight: '', notes: '' });
+            loadData();
+            showAlert('Berhasil', 'Hewan berhasil ditambahkan');
+        } catch (error) {
+            showAlert('Gagal', error.message || 'Gagal menambahkan hewan');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDeleteAnimal = async (id, name) => {
+        if (Platform.OS === 'web') {
+            if (window.confirm(`Hapus ${name}?`)) {
+                try {
+                    await animalApi.delete(id);
+                    loadData();
+                    showAlert('Berhasil', 'Hewan berhasil dihapus');
+                } catch (error) {
+                    showAlert('Gagal', error.message);
+                }
+            }
+        } else {
+            Alert.alert('Hapus Hewan', `Yakin ingin menghapus ${name}?`, [
+                { text: 'Batal', style: 'cancel' },
+                {
+                    text: 'Hapus', style: 'destructive', onPress: async () => {
+                        try {
+                            await animalApi.delete(id);
+                            loadData();
+                        } catch (error) {
+                            showAlert('Gagal', error.message);
+                        }
+                    }
+                },
+            ]);
+        }
+    };
+
+    const filteredAnimals = animals.filter(animal => {
+        if (selectedFilter === 'all') return true;
+        return animal.healthStatus === selectedFilter;
+    });
+
+    const statCards = [
+        { label: 'Total', value: stats.total, icon: 'paw', color: '#964b00', bg: '#faf8f5' },
+        { label: 'Sehat', value: stats.healthy, icon: 'checkmark-circle', color: '#10b981', bg: '#ecfdf5' },
+        { label: 'Sakit', value: stats.sick, icon: 'medkit', color: '#dc2626', bg: '#fef2f2' },
+        { label: 'Hamil', value: stats.pregnant, icon: 'heart', color: '#7c3f06', bg: '#fdf5ef' },
+    ];
+
+    if (loading) {
+        return (
+            <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+                <ActivityIndicator size="large" color="#964b00" />
+                <Text style={styles.loadingText}>Memuat data...</Text>
+            </View>
+        );
+    }
+
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#964b00']} />}
+            >
                 {/* Header */}
                 <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
                     <View style={styles.headerTop}>
-                        <View style={styles.headerLeft}>
+                        <View>
                             <Text style={styles.headerSubtitle}>Manajemen Ternak 🐄</Text>
                             <Text style={styles.headerTitle}>Peternakan Saya</Text>
                         </View>
-                        <View style={styles.headerRight}>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Ionicons name="search-outline" size={22} color="#374151" />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Ionicons name="add" size={24} color="#374151" />
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+                            <LinearGradient colors={['#964b00', '#7c3f06']} style={styles.addButtonGradient}>
+                                <Ionicons name="add" size={24} color="#fff" />
+                            </LinearGradient>
+                        </TouchableOpacity>
                     </View>
                 </Animated.View>
 
-                {/* Summary Card */}
-                <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.summarySection}>
-                    <LinearGradient
-                        colors={['#964b00', '#7c3f06']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.summaryCard}
-                    >
-                        <View style={styles.summaryDecor1} />
-                        <View style={styles.summaryDecor2} />
-
-                        <View style={styles.summaryContent}>
-                            <View style={styles.summaryLeft}>
-                                <Text style={styles.summaryLabel}>Total Hewan Ternak</Text>
-                                <Text style={styles.summaryValue}>24</Text>
-                                <View style={styles.trendBadge}>
-                                    <Ionicons name="trending-up" size={14} color="#ffffff" />
-                                    <Text style={styles.trendText}>+12% dari bulan lalu</Text>
-                                </View>
-                            </View>
-                            <View style={styles.summaryIcon}>
-                                <Text style={styles.summaryEmoji}>🐄</Text>
-                            </View>
-                        </View>
-                    </LinearGradient>
-                </Animated.View>
-
-                {/* Stats Grid */}
-                <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.section}>
-                    <Text style={styles.sectionTitle}>Statistik</Text>
-                    <View style={styles.statsGrid}>
-                        {stats.map((stat, index) => (
-                            <Animated.View
-                                key={index}
-                                entering={FadeInUp.delay(index * 80).duration(400)}
-                                style={styles.statCard}
-                            >
-                                <View style={[styles.statIconContainer, { backgroundColor: stat.bgColor }]}>
+                {/* Stats */}
+                <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.statsSection}>
+                    <View style={styles.statsRow}>
+                        {statCards.map((stat, index) => (
+                            <Animated.View key={index} entering={FadeInUp.delay(index * 80)} style={styles.statCard}>
+                                <View style={[styles.statIcon, { backgroundColor: stat.bg }]}>
                                     <Ionicons name={stat.icon} size={20} color={stat.color} />
                                 </View>
                                 <Text style={styles.statValue}>{stat.value}</Text>
-                                <Text style={styles.statTitle}>{stat.title}</Text>
-                                <View style={[
-                                    styles.statTrend,
-                                    { backgroundColor: stat.trend.startsWith('+') ? '#ecfdf5' : '#fef2f2' }
-                                ]}>
-                                    <Ionicons
-                                        name={stat.trend.startsWith('+') ? 'trending-up' : 'trending-down'}
-                                        size={10}
-                                        color={stat.trend.startsWith('+') ? '#10b981' : '#ef4444'}
-                                    />
-                                    <Text style={[
-                                        styles.statTrendText,
-                                        { color: stat.trend.startsWith('+') ? '#10b981' : '#ef4444' }
-                                    ]}>{stat.trend}</Text>
-                                </View>
+                                <Text style={styles.statLabel}>{stat.label}</Text>
                             </Animated.View>
                         ))}
                     </View>
                 </Animated.View>
 
-                {/* Quick Actions */}
-                <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.section}>
-                    <Text style={styles.sectionTitle}>Aksi Cepat</Text>
-                    <View style={styles.actionsRow}>
-                        {quickActions.map((action, index) => (
-                            <Animated.View
-                                key={action.id}
-                                entering={FadeInRight.delay(index * 100).duration(400)}
-                                style={styles.actionWrapper}
-                            >
-                                <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
-                                    <LinearGradient
-                                        colors={action.gradient}
-                                        style={styles.actionGradient}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                    >
-                                        <Ionicons name={action.icon} size={24} color="#ffffff" />
-                                    </LinearGradient>
-                                    <Text style={styles.actionTitle}>{action.title}</Text>
-                                </TouchableOpacity>
-                            </Animated.View>
-                        ))}
-                    </View>
-                </Animated.View>
+                {/* Filter Pills */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterContainer}>
+                    {filters.map((filter) => (
+                        <TouchableOpacity
+                            key={filter.id}
+                            style={[styles.filterPill, selectedFilter === filter.id && styles.filterPillActive]}
+                            onPress={() => setSelectedFilter(filter.id)}
+                        >
+                            <Text style={[styles.filterText, selectedFilter === filter.id && styles.filterTextActive]}>
+                                {filter.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
 
                 {/* Animal List */}
-                <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Daftar Hewan</Text>
-                        <TouchableOpacity>
-                            <Text style={styles.seeAll}>Lihat Semua</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Filter Pills */}
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={styles.filterScroll}
-                        contentContainerStyle={styles.filterContainer}
-                    >
-                        {filters.map((filter) => (
-                            <TouchableOpacity
-                                key={filter.id}
-                                style={[
-                                    styles.filterPill,
-                                    selectedFilter === filter.id && styles.filterPillActive
-                                ]}
-                                onPress={() => setSelectedFilter(filter.id)}
-                            >
-                                <Text style={[
-                                    styles.filterText,
-                                    selectedFilter === filter.id && styles.filterTextActive
-                                ]}>{filter.label}</Text>
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Daftar Hewan ({filteredAnimals.length})</Text>
+                    {filteredAnimals.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyIcon}>🐄</Text>
+                            <Text style={styles.emptyTitle}>Belum Ada Hewan</Text>
+                            <Text style={styles.emptyText}>Tambahkan hewan pertama Anda</Text>
+                            <TouchableOpacity style={styles.emptyButton} onPress={() => setModalVisible(true)}>
+                                <Text style={styles.emptyButtonText}>+ Tambah Hewan</Text>
                             </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-
-                    {/* Animal Cards */}
-                    <View style={styles.animalList}>
-                        {animals.map((animal, index) => (
-                            <AnimalCard key={animal.id} animal={animal} index={index} />
-                        ))}
-                    </View>
-                </Animated.View>
+                        </View>
+                    ) : (
+                        <View style={styles.animalList}>
+                            {filteredAnimals.map((animal, index) => (
+                                <AnimalCard
+                                    key={animal.id}
+                                    animal={animal}
+                                    index={index}
+                                    onDelete={() => handleDeleteAnimal(animal.id, animal.name)}
+                                    onPress={() => navigation.navigate('AnimalDetail', { animal })}
+                                />
+                            ))}
+                        </View>
+                    )}
+                </View>
 
                 <View style={{ height: 100 }} />
             </ScrollView>
+
+            {/* Add Animal Modal */}
+            <Modal visible={modalVisible} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Tambah Hewan Baru</Text>
+                            <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                <Ionicons name="close" size={24} color="#6b7280" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <View style={styles.formGroup}>
+                                <Text style={styles.formLabel}>Nama Hewan *</Text>
+                                <TextInput
+                                    style={styles.formInput}
+                                    value={newAnimal.name}
+                                    onChangeText={(text) => setNewAnimal({ ...newAnimal, name: text })}
+                                    placeholder="Contoh: Brahma 01"
+                                    placeholderTextColor="#9ca3af"
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.formLabel}>Jenis Hewan</Text>
+                                <View style={styles.typeGrid}>
+                                    {animalTypes.map((type) => (
+                                        <TouchableOpacity
+                                            key={type.id}
+                                            style={[styles.typeCard, newAnimal.type === type.id && styles.typeCardActive]}
+                                            onPress={() => setNewAnimal({ ...newAnimal, type: type.id })}
+                                        >
+                                            <Text style={styles.typeIcon}>{type.icon}</Text>
+                                            <Text style={[styles.typeLabel, newAnimal.type === type.id && styles.typeLabelActive]}>
+                                                {type.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+
+                            <View style={styles.formRow}>
+                                <View style={[styles.formGroup, { flex: 1 }]}>
+                                    <Text style={styles.formLabel}>Ras/Jenis</Text>
+                                    <TextInput
+                                        style={styles.formInput}
+                                        value={newAnimal.breed}
+                                        onChangeText={(text) => setNewAnimal({ ...newAnimal, breed: text })}
+                                        placeholder="Contoh: Brahman"
+                                        placeholderTextColor="#9ca3af"
+                                    />
+                                </View>
+                                <View style={[styles.formGroup, { flex: 1, marginLeft: 12 }]}>
+                                    <Text style={styles.formLabel}>Berat (kg)</Text>
+                                    <TextInput
+                                        style={styles.formInput}
+                                        value={newAnimal.weight}
+                                        onChangeText={(text) => setNewAnimal({ ...newAnimal, weight: text })}
+                                        placeholder="0"
+                                        placeholderTextColor="#9ca3af"
+                                        keyboardType="numeric"
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.formLabel}>Jenis Kelamin</Text>
+                                <View style={styles.genderRow}>
+                                    {[{ id: 'male', label: 'Jantan', icon: '♂️' }, { id: 'female', label: 'Betina', icon: '♀️' }].map((g) => (
+                                        <TouchableOpacity
+                                            key={g.id}
+                                            style={[styles.genderCard, newAnimal.gender === g.id && styles.genderCardActive]}
+                                            onPress={() => setNewAnimal({ ...newAnimal, gender: g.id })}
+                                        >
+                                            <Text style={styles.genderIcon}>{g.icon}</Text>
+                                            <Text style={[styles.genderLabel, newAnimal.gender === g.id && styles.genderLabelActive]}>
+                                                {g.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.formLabel}>Catatan</Text>
+                                <TextInput
+                                    style={[styles.formInput, styles.formTextarea]}
+                                    value={newAnimal.notes}
+                                    onChangeText={(text) => setNewAnimal({ ...newAnimal, notes: text })}
+                                    placeholder="Catatan tambahan..."
+                                    placeholderTextColor="#9ca3af"
+                                    multiline
+                                    numberOfLines={3}
+                                />
+                            </View>
+                        </ScrollView>
+
+                        <TouchableOpacity
+                            style={[styles.submitButton, saving && styles.buttonDisabled]}
+                            onPress={handleAddAnimal}
+                            disabled={saving}
+                        >
+                            <LinearGradient colors={['#964b00', '#7c3f06']} style={styles.submitButtonGradient}>
+                                <Text style={styles.submitButtonText}>
+                                    {saving ? 'Menyimpan...' : 'Simpan Hewan'}
+                                </Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
 
-const AnimalCard = ({ animal, index }) => {
+const AnimalCard = ({ animal, index, onDelete, onPress }) => {
     const animalType = ANIMAL_TYPES[animal.type] || ANIMAL_TYPES.OTHER;
-    const isHealthy = animal.status === 'Sehat';
+    const isHealthy = animal.healthStatus === 'healthy';
+    const isSick = animal.healthStatus === 'sick';
+
+    const getStatusColor = () => {
+        if (isSick) return '#dc2626';
+        if (animal.healthStatus === 'pregnant') return '#7c3f06';
+        return '#10b981';
+    };
+
+    const getStatusLabel = () => {
+        if (isSick) return 'Sakit';
+        if (animal.healthStatus === 'pregnant') return 'Hamil';
+        return 'Sehat';
+    };
 
     return (
-        <Animated.View entering={FadeInUp.delay(index * 100).duration(400)}>
-            <TouchableOpacity activeOpacity={0.9} onPress={() => { }}>
-                <View style={styles.animalCard}>
-                    <View style={styles.animalLeft}>
-                        <View style={styles.animalImageContainer}>
-                            <Text style={styles.animalEmoji}>{animalType.icon}</Text>
-                            <View style={[
-                                styles.statusDot,
-                                { backgroundColor: isHealthy ? '#10b981' : '#ef4444' }
-                            ]} />
+        <Animated.View entering={FadeInRight.delay(index * 80).duration(400)}>
+            <TouchableOpacity style={styles.animalCard} onPress={onPress} activeOpacity={0.9}>
+                <View style={styles.animalLeft}>
+                    <View style={styles.animalImageContainer}>
+                        <Text style={styles.animalEmoji}>{animalType.icon}</Text>
+                        <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
+                    </View>
+                </View>
+                <View style={styles.animalContent}>
+                    <View style={styles.animalHeader}>
+                        <Text style={styles.animalName}>{animal.name}</Text>
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + '15' }]}>
+                            <Text style={[styles.statusText, { color: getStatusColor() }]}>{getStatusLabel()}</Text>
                         </View>
                     </View>
-                    <View style={styles.animalContent}>
-                        <View style={styles.animalHeader}>
-                            <Text style={styles.animalName}>{animal.name}</Text>
-                            <View style={[
-                                styles.statusBadge,
-                                { backgroundColor: isHealthy ? '#ecfdf5' : '#fef2f2' }
-                            ]}>
-                                <Text style={[
-                                    styles.statusText,
-                                    { color: isHealthy ? '#059669' : '#dc2626' }
-                                ]}>{animal.status}</Text>
-                            </View>
-                        </View>
-                        <Text style={styles.animalType}>{animalType.label}</Text>
-                        <View style={styles.animalMeta}>
-                            <View style={styles.metaItem}>
-                                <Ionicons name="calendar-outline" size={12} color="#9ca3af" />
-                                <Text style={styles.metaText}>{animal.age}</Text>
-                            </View>
-                            <View style={styles.metaDot} />
+                    <Text style={styles.animalType}>{animalType.label} {animal.breed ? `• ${animal.breed}` : ''}</Text>
+                    <View style={styles.animalMeta}>
+                        {animal.weight > 0 && (
                             <View style={styles.metaItem}>
                                 <Ionicons name="scale-outline" size={12} color="#9ca3af" />
-                                <Text style={styles.metaText}>{animal.weight}</Text>
+                                <Text style={styles.metaText}>{animal.weight} kg</Text>
                             </View>
-                            <View style={styles.metaDot} />
-                            <View style={styles.metaItem}>
-                                <Ionicons name="time-outline" size={12} color="#9ca3af" />
-                                <Text style={styles.metaText}>{animal.lastCheck}</Text>
-                            </View>
+                        )}
+                        <View style={styles.metaItem}>
+                            <Ionicons name="male-female-outline" size={12} color="#9ca3af" />
+                            <Text style={styles.metaText}>{animal.gender === 'male' ? 'Jantan' : 'Betina'}</Text>
                         </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
                 </View>
+                <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+                    <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                </TouchableOpacity>
             </TouchableOpacity>
         </Animated.View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#ffffff',
-    },
-    scrollContent: {
-        paddingBottom: 40,
-    },
-    header: {
-        paddingHorizontal: SIZES.padding,
-        paddingTop: 8,
-        paddingBottom: 16,
-    },
-    headerTop: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    headerLeft: {},
-    headerSubtitle: {
-        fontSize: 14,
-        color: '#6b7280',
-        marginBottom: 2,
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: '800',
-        color: '#111827',
-        letterSpacing: -0.5,
-    },
-    headerRight: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    iconButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#faf8f5',
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...SHADOWS.small,
-    },
-    summarySection: {
-        paddingHorizontal: SIZES.padding,
-        marginBottom: 24,
-    },
-    summaryCard: {
-        borderRadius: 24,
-        padding: 24,
-        overflow: 'hidden',
-        ...SHADOWS.large,
-    },
-    summaryDecor1: {
-        position: 'absolute',
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        top: -40,
-        right: -20,
-    },
-    summaryDecor2: {
-        position: 'absolute',
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        bottom: -20,
-        left: 20,
-    },
-    summaryContent: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    summaryLeft: {},
-    summaryLabel: {
-        fontSize: 14,
-        color: 'rgba(255,255,255,0.8)',
-        marginBottom: 4,
-    },
-    summaryValue: {
-        fontSize: 48,
-        fontWeight: '800',
-        color: '#ffffff',
-        marginBottom: 8,
-    },
-    trendBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-        alignSelf: 'flex-start',
-    },
-    trendText: {
-        fontSize: 12,
-        color: '#ffffff',
-        fontWeight: '500',
-    },
-    summaryIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 24,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    summaryEmoji: {
-        fontSize: 48,
-    },
-    section: {
-        paddingHorizontal: SIZES.padding,
-        marginBottom: 24,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#111827',
-        marginBottom: 16,
-    },
-    seeAll: {
-        color: '#964b00',
-        fontWeight: '600',
-        fontSize: 14,
-    },
-    statsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 12,
-    },
-    statCard: {
-        width: (width - SIZES.padding * 2 - 12) / 2,
-        backgroundColor: '#ffffff',
-        borderRadius: 20,
-        padding: 16,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#f0ebe3',
-        ...SHADOWS.small,
-    },
-    statIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 12,
-    },
-    statValue: {
-        fontSize: 28,
-        fontWeight: '800',
-        color: '#111827',
-        marginBottom: 4,
-    },
-    statTitle: {
-        fontSize: 12,
-        color: '#6b7280',
-        marginBottom: 8,
-    },
-    statTrend: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 2,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 8,
-    },
-    statTrendText: {
-        fontSize: 10,
-        fontWeight: '600',
-    },
-    actionsRow: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    actionWrapper: {
-        flex: 1,
-    },
-    actionButton: {
-        alignItems: 'center',
-        gap: 10,
-    },
-    actionGradient: {
-        width: '100%',
-        paddingVertical: 18,
-        borderRadius: 18,
-        alignItems: 'center',
-        ...SHADOWS.small,
-    },
-    actionTitle: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#374151',
-    },
-    filterScroll: {
-        marginBottom: 16,
-        marginLeft: -SIZES.padding,
-        marginRight: -SIZES.padding,
-        marginTop: -8,
-    },
-    filterContainer: {
-        paddingHorizontal: SIZES.padding,
-        gap: 8,
-    },
-    filterPill: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#faf8f5',
-        borderWidth: 1,
-        borderColor: '#f0ebe3',
-    },
-    filterPillActive: {
-        backgroundColor: '#964b00',
-        borderColor: '#964b00',
-    },
-    filterText: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: '#6b7280',
-    },
-    filterTextActive: {
-        color: '#ffffff',
-    },
-    animalList: {
-        gap: 12,
-    },
-    animalCard: {
-        backgroundColor: '#ffffff',
-        borderRadius: 20,
-        padding: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#f0ebe3',
-        ...SHADOWS.small,
-    },
-    animalLeft: {
-        marginRight: 14,
-    },
-    animalImageContainer: {
-        width: 56,
-        height: 56,
-        borderRadius: 16,
-        backgroundColor: '#faf8f5',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-    },
-    animalEmoji: {
-        fontSize: 28,
-    },
-    statusDot: {
-        position: 'absolute',
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        bottom: -2,
-        right: -2,
-        borderWidth: 2,
-        borderColor: '#ffffff',
-    },
-    animalContent: {
-        flex: 1,
-    },
-    animalHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 2,
-    },
-    animalName: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#111827',
-    },
-    statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 8,
-    },
-    statusText: {
-        fontSize: 10,
-        fontWeight: '600',
-    },
-    animalType: {
-        fontSize: 13,
-        color: '#6b7280',
-        marginBottom: 6,
-    },
-    animalMeta: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    metaItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 3,
-    },
-    metaText: {
-        fontSize: 11,
-        color: '#9ca3af',
-    },
-    metaDot: {
-        width: 3,
-        height: 3,
-        borderRadius: 1.5,
-        backgroundColor: '#d1d5db',
-        marginHorizontal: 6,
-    },
+    container: { flex: 1, backgroundColor: '#ffffff' },
+    centered: { justifyContent: 'center', alignItems: 'center' },
+    loadingText: { marginTop: 12, color: '#6b7280', fontSize: 14 },
+    header: { paddingHorizontal: SIZES.padding, paddingTop: 8, paddingBottom: 16 },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    headerSubtitle: { fontSize: 14, color: '#6b7280', marginBottom: 2 },
+    headerTitle: { fontSize: 24, fontWeight: '800', color: '#111827', letterSpacing: -0.5 },
+    addButton: { borderRadius: 16, overflow: 'hidden', ...SHADOWS.medium },
+    addButtonGradient: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
+    statsSection: { paddingHorizontal: SIZES.padding, marginBottom: 20 },
+    statsRow: { flexDirection: 'row', gap: 10 },
+    statCard: { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#f0ebe3', ...SHADOWS.small },
+    statIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+    statValue: { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 2 },
+    statLabel: { fontSize: 11, color: '#6b7280' },
+    filterScroll: { marginBottom: 16 },
+    filterContainer: { paddingHorizontal: SIZES.padding, gap: 8 },
+    filterPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#faf8f5', borderWidth: 1, borderColor: '#f0ebe3' },
+    filterPillActive: { backgroundColor: '#964b00', borderColor: '#964b00' },
+    filterText: { fontSize: 13, fontWeight: '500', color: '#6b7280' },
+    filterTextActive: { color: '#fff' },
+    section: { paddingHorizontal: SIZES.padding },
+    sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
+    emptyState: { alignItems: 'center', paddingVertical: 40, backgroundColor: '#faf8f5', borderRadius: 20, borderWidth: 1, borderColor: '#f0ebe3' },
+    emptyIcon: { fontSize: 48, marginBottom: 12 },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 4 },
+    emptyText: { fontSize: 14, color: '#6b7280', marginBottom: 20 },
+    emptyButton: { backgroundColor: '#964b00', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+    emptyButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+    animalList: { gap: 12 },
+    animalCard: { backgroundColor: '#fff', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#f0ebe3', ...SHADOWS.small },
+    animalLeft: { marginRight: 14 },
+    animalImageContainer: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#faf8f5', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+    animalEmoji: { fontSize: 28 },
+    statusDot: { position: 'absolute', width: 12, height: 12, borderRadius: 6, bottom: -2, right: -2, borderWidth: 2, borderColor: '#fff' },
+    animalContent: { flex: 1 },
+    animalHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+    animalName: { fontSize: 16, fontWeight: '700', color: '#111827' },
+    statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+    statusText: { fontSize: 10, fontWeight: '600' },
+    animalType: { fontSize: 13, color: '#6b7280', marginBottom: 6 },
+    animalMeta: { flexDirection: 'row', gap: 12 },
+    metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    metaText: { fontSize: 11, color: '#9ca3af' },
+    deleteButton: { padding: 8 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+    modalTitle: { fontSize: 20, fontWeight: '700', color: '#111827' },
+    formGroup: { marginBottom: 20 },
+    formLabel: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
+    formInput: { backgroundColor: '#faf8f5', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: '#111827', borderWidth: 1, borderColor: '#f0ebe3' },
+    formTextarea: { height: 80, textAlignVertical: 'top' },
+    formRow: { flexDirection: 'row' },
+    typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    typeCard: { width: (width - 48 - 20) / 3, backgroundColor: '#faf8f5', borderRadius: 14, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#f0ebe3' },
+    typeCardActive: { backgroundColor: '#964b00', borderColor: '#964b00' },
+    typeIcon: { fontSize: 24, marginBottom: 4 },
+    typeLabel: { fontSize: 11, fontWeight: '500', color: '#374151' },
+    typeLabelActive: { color: '#fff' },
+    genderRow: { flexDirection: 'row', gap: 12 },
+    genderCard: { flex: 1, backgroundColor: '#faf8f5', borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#f0ebe3' },
+    genderCardActive: { backgroundColor: '#964b00', borderColor: '#964b00' },
+    genderIcon: { fontSize: 24, marginBottom: 4 },
+    genderLabel: { fontSize: 13, fontWeight: '500', color: '#374151' },
+    genderLabelActive: { color: '#fff' },
+    submitButton: { marginTop: 8, borderRadius: 16, overflow: 'hidden', ...SHADOWS.medium },
+    submitButtonGradient: { paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
+    submitButtonText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+    buttonDisabled: { opacity: 0.7 },
 });
 
 export default FarmDashboardScreen;

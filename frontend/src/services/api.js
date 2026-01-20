@@ -17,12 +17,15 @@ const api = axios.create({
 });
 
 // Request interceptor - Add auth token
+// Request interceptor - Add auth token
 api.interceptors.request.use(
     async (config) => {
         try {
             const token = await storage.getItem(STORAGE_KEYS.AUTH_TOKEN);
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
+            } else {
+                console.warn('No auth token available for request to', config.url);
             }
         } catch (error) {
             console.log('Error getting token:', error);
@@ -44,6 +47,12 @@ api.interceptors.response.use(
             const message = data?.message
                 ? `${data.message}${data.error ? `: ${data.error}` : ''}`
                 : 'Terjadi kesalahan';
+
+            if (error.response.status === 401) {
+                console.error('Unauthorized (401) - Token might be invalid or expired');
+                // You might want to trigger a logout here via an event emitter
+            }
+
             return Promise.reject(new Error(message));
         } else if (error.request) {
             // No response received
@@ -53,6 +62,8 @@ api.interceptors.response.use(
         }
     }
 );
+
+import { FIREBASE_CONFIG } from '../config/firebase';
 
 // Auth endpoints
 export const authApi = {
@@ -65,6 +76,18 @@ export const authApi = {
     verifySellerOtp: (otp) => api.post('/auth/seller/verify-otp', { otp }),
     getProfile: () => api.get('/auth/me'),
     updateProfile: (data) => api.put('/auth/me', data),
+    exchangeCustomToken: async (customToken) => {
+        try {
+            const response = await axios.post(
+                `https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${FIREBASE_CONFIG.apiKey}`,
+                { token: customToken, returnSecureToken: true }
+            );
+            return response.data.idToken;
+        } catch (error) {
+            console.error('Error exchanging custom token:', error.response?.data || error.message);
+            throw error;
+        }
+    },
 };
 
 // Farm endpoints
@@ -80,12 +103,13 @@ export const farmApi = {
 
 // Animal endpoints
 export const animalApi = {
+    getMyAnimals: (params) => api.get('/animals/my', { params }),
     getByFarm: (farmId, params) => api.get(`/farms/${farmId}/animals`, { params }),
     getById: (id) => api.get(`/animals/${id}`),
-    create: (farmId, data) => api.post(`/farms/${farmId}/animals`, data),
+    create: (data) => api.post('/animals', data),
     update: (id, data) => api.put(`/animals/${id}`, data),
     delete: (id) => api.delete(`/animals/${id}`),
-    getStats: (farmId) => api.get(`/farms/${farmId}/animals/stats`),
+    getStats: () => api.get('/animals/stats'),
     getHealthRecords: (animalId, params) => api.get(`/animals/${animalId}/health-records`, { params }),
     addHealthRecord: (animalId, data) => api.post(`/animals/${animalId}/health-records`, data),
 };

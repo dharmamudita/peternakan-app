@@ -61,6 +61,21 @@ const LoginScreen = ({ navigation }) => {
         if (fbResponse) handleFacebookResponse(fbResponse);
     }, [fbResponse]);
 
+    const exchangeAndLogin = async (rawToken, user) => {
+        try {
+            // Coba tukar custom token jadi ID Token
+            const idToken = await authApi.exchangeCustomToken(rawToken);
+            console.log('Token exchanged successfully');
+            await login(idToken, user);
+            navigation.replace('MainTabs');
+        } catch (exchangeError) {
+            console.warn('Token exchange failed, trying with direct token:', exchangeError.message);
+            // Fallback: coba pakai token langsung (siapa tahu sudah ID Token)
+            await login(rawToken, user);
+            navigation.replace('MainTabs');
+        }
+    };
+
     const handleGoogleResponse = async (response) => {
         console.log('Google response type:', response?.type);
         if (response?.type === 'success') {
@@ -74,8 +89,7 @@ const LoginScreen = ({ navigation }) => {
                 const user = result?.user || result?.data?.user;
 
                 if (token && user) {
-                    await login(token, user);
-                    navigation.replace('MainTabs');
+                    await exchangeAndLogin(token, user);
                 } else {
                     throw new Error('Token atau user tidak ditemukan');
                 }
@@ -116,8 +130,7 @@ const LoginScreen = ({ navigation }) => {
                 const user = result?.user || result?.data?.user;
 
                 if (token && user) {
-                    await login(token, user);
-                    navigation.replace('MainTabs');
+                    await exchangeAndLogin(token, user);
                 } else {
                     throw new Error('Token atau user tidak ditemukan');
                 }

@@ -33,6 +33,7 @@ import {
     ProfileScreen,
     SellerRegistrationScreen,
     SellerDashboardScreen,
+    AnimalDetailScreen,
 } from '../screens';
 
 const Stack = createStackNavigator();
@@ -177,6 +178,7 @@ const AppNavigator = () => {
                         <Stack.Screen name="MainTabs" component={MainTabs} />
                         <Stack.Screen name="SellerRegistration" component={SellerRegistrationScreen} />
                         <Stack.Screen name="SellerDashboard" component={SellerDashboardScreen} />
+                        <Stack.Screen name="AnimalDetail" component={AnimalDetailScreen} />
                     </>
                 ) : (
                     <Stack.Screen name="Auth" component={AuthStack} />
