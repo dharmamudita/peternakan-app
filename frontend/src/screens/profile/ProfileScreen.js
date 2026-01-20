@@ -45,7 +45,7 @@ const ProfileScreen = ({ navigation }) => {
             return;
         }
 
-        showFeatureAlert('Ubah Password');
+        navigation.navigate('ChangePassword');
     };
 
     const stats = [
@@ -66,7 +66,7 @@ const ProfileScreen = ({ navigation }) => {
         {
             title: 'Pengaturan Akun',
             items: [
-                { icon: 'person-outline', label: 'Edit Profil', color: '#7c3f06', action: () => showFeatureAlert('Edit Profil') },
+                { icon: 'person-outline', label: 'Edit Profil', color: '#7c3f06', action: () => navigation.navigate('EditProfile') },
                 { icon: 'lock-closed-outline', label: 'Ubah Password', color: '#b87333', action: handleChangePassword },
                 { icon: 'card-outline', label: 'Metode Pembayaran', color: '#10b981', action: () => showFeatureAlert('Metode Pembayaran') },
                 { icon: 'location-outline', label: 'Alamat Tersimpan', color: '#5d3a1a', action: () => showFeatureAlert('Alamat Tersimpan') },
@@ -82,10 +82,10 @@ const ProfileScreen = ({ navigation }) => {
         {
             title: 'Bantuan & Informasi',
             items: [
-                { icon: 'help-circle-outline', label: 'Pusat Bantuan', color: '#b87333', action: () => showFeatureAlert('Pusat Bantuan') },
-                { icon: 'people-outline', label: 'Peraturan Komunitas', color: '#7c3f06', action: () => showFeatureAlert('Peraturan Komunitas') },
-                { icon: 'shield-checkmark-outline', label: 'Kebijakan Privasi', color: '#10b981', action: () => showFeatureAlert('Kebijakan Privasi') },
-                { icon: 'information-circle-outline', label: 'Tentang Aplikasi', color: '#5d3a1a', action: () => showFeatureAlert('Tentang Aplikasi') },
+                { icon: 'help-circle-outline', label: 'Pusat Bantuan', color: '#b87333', action: () => navigation.navigate('Help', { type: 'help_center', title: 'Pusat Bantuan' }) },
+                { icon: 'people-outline', label: 'Peraturan Komunitas', color: '#7c3f06', action: () => navigation.navigate('Help', { type: 'community', title: 'Peraturan Komunitas' }) },
+                { icon: 'shield-checkmark-outline', label: 'Kebijakan Privasi', color: '#10b981', action: () => navigation.navigate('Help', { type: 'privacy', title: 'Kebijakan Privasi' }) },
+                { icon: 'information-circle-outline', label: 'Tentang Aplikasi', color: '#5d3a1a', action: () => navigation.navigate('Help', { type: 'about', title: 'Tentang Aplikasi' }) },
             ],
         },
     ];
