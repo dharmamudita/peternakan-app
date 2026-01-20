@@ -29,7 +29,7 @@ const FarmDashboardScreen = ({ navigation }) => {
     const [selectedFilter, setSelectedFilter] = useState('all');
     const [modalVisible, setModalVisible] = useState(false);
     const [newAnimal, setNewAnimal] = useState({
-        name: '', type: 'CATTLE', breed: '', gender: 'male', weight: '', notes: ''
+        name: '', type: 'CATTLE', breed: '', gender: 'male', weight: '', notes: '', birthDate: '', quantity: '1'
     });
     const [saving, setSaving] = useState(false);
 
@@ -97,7 +97,7 @@ const FarmDashboardScreen = ({ navigation }) => {
                 healthStatus: 'healthy',
             });
             setModalVisible(false);
-            setNewAnimal({ name: '', type: 'CATTLE', breed: '', gender: 'male', weight: '', notes: '' });
+            setNewAnimal({ name: '', type: 'CATTLE', breed: '', gender: 'male', weight: '', notes: '', birthDate: '', quantity: '1' });
             loadData();
             showAlert('Berhasil', 'Hewan berhasil ditambahkan');
         } catch (error) {
@@ -250,14 +250,38 @@ const FarmDashboardScreen = ({ navigation }) => {
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <View style={styles.formGroup}>
-                                <Text style={styles.formLabel}>Nama Hewan *</Text>
+                                <Text style={styles.formLabel}>Nama Hewan (atau Nama Kelompok) *</Text>
                                 <TextInput
                                     style={styles.formInput}
                                     value={newAnimal.name}
                                     onChangeText={(text) => setNewAnimal({ ...newAnimal, name: text })}
-                                    placeholder="Contoh: Brahma 01"
+                                    placeholder="Contoh: Ayam Petelur"
                                     placeholderTextColor="#9ca3af"
                                 />
+                            </View>
+
+                            <View style={styles.formRow}>
+                                <View style={[styles.formGroup, { flex: 1 }]}>
+                                    <Text style={styles.formLabel}>Jumlah (Ekor)</Text>
+                                    <TextInput
+                                        style={styles.formInput}
+                                        value={newAnimal.quantity?.toString()}
+                                        onChangeText={(text) => setNewAnimal({ ...newAnimal, quantity: text })}
+                                        placeholder="1"
+                                        keyboardType="numeric"
+                                        placeholderTextColor="#9ca3af"
+                                    />
+                                </View>
+                                <View style={[styles.formGroup, { flex: 1, marginLeft: 12 }]}>
+                                    <Text style={styles.formLabel}>Tanggal Lahir</Text>
+                                    <TextInput
+                                        style={styles.formInput}
+                                        value={newAnimal.birthDate}
+                                        onChangeText={(text) => setNewAnimal({ ...newAnimal, birthDate: text })}
+                                        placeholder="YYYY-MM-DD"
+                                        placeholderTextColor="#9ca3af"
+                                    />
+                                </View>
                             </View>
 
                             <View style={styles.formGroup}>
@@ -352,6 +376,17 @@ const FarmDashboardScreen = ({ navigation }) => {
     );
 };
 
+const calculateAge = (birthDateString) => {
+    if (!birthDateString) return null;
+    const birthDate = new Date(birthDateString);
+    const today = new Date();
+    let years = today.getFullYear() - birthDate.getFullYear();
+    let months = today.getMonth() - birthDate.getMonth();
+    if (months < 0) { years--; months += 12; }
+    if (years > 0) return `${years} thn`;
+    return `${months} bln`;
+};
+
 const AnimalCard = ({ animal, index, onDelete, onPress }) => {
     const animalType = ANIMAL_TYPES[animal.type] || ANIMAL_TYPES.OTHER;
     const isHealthy = animal.healthStatus === 'healthy';
@@ -368,6 +403,8 @@ const AnimalCard = ({ animal, index, onDelete, onPress }) => {
         if (animal.healthStatus === 'pregnant') return 'Hamil';
         return 'Sehat';
     };
+
+    const age = calculateAge(animal.birthDate);
 
     return (
         <Animated.View entering={FadeInRight.delay(index * 80).duration(400)}>
@@ -397,6 +434,12 @@ const AnimalCard = ({ animal, index, onDelete, onPress }) => {
                             <Ionicons name="male-female-outline" size={12} color="#9ca3af" />
                             <Text style={styles.metaText}>{animal.gender === 'male' ? 'Jantan' : 'Betina'}</Text>
                         </View>
+                        {age && (
+                            <View style={styles.metaItem}>
+                                <Ionicons name="time-outline" size={12} color="#9ca3af" />
+                                <Text style={styles.metaText}>{age}</Text>
+                            </View>
+                        )}
                     </View>
                 </View>
                 <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>

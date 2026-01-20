@@ -70,6 +70,52 @@ const AnimalDetailScreen = ({ navigation, route }) => {
         });
     };
 
+    const calculateAge = (birthDateString) => {
+        if (!birthDateString) return '-';
+        const birthDate = new Date(birthDateString);
+        const today = new Date();
+
+        let years = today.getFullYear() - birthDate.getFullYear();
+        let months = today.getMonth() - birthDate.getMonth();
+
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+
+        if (years > 0) return `${years} thn ${months} bln`;
+        return `${months} bulan`;
+    };
+
+    const handleDeathReport = () => {
+        Alert.alert(
+            'Laporkan Kematian',
+            'Apakah hewan ini mati? Status akan diubah menjadi mati dan populasi aktif berkurang.',
+            [
+                { text: 'Batal', style: 'cancel' },
+                {
+                    text: 'Ya, Laporkan',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            setLoading(true);
+                            await animalApi.update(animal.id, {
+                                isActive: false,
+                                deathDate: new Date(),
+                                healthStatus: 'dead'
+                            });
+                            Alert.alert('Tercatat', 'Hewan telah dilaporkan mati.');
+                            navigation.goBack();
+                        } catch (error) {
+                            Alert.alert('Gagal', error.message);
+                            setLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* Header */}
@@ -78,9 +124,14 @@ const AnimalDetailScreen = ({ navigation, route }) => {
                     <Ionicons name="arrow-back" size={24} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Detail Hewan</Text>
-                <TouchableOpacity style={styles.editButton}>
-                    <Ionicons name="create-outline" size={24} color="#964b00" />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity style={styles.editButton} onPress={handleDeathReport}>
+                        <Ionicons name="skull-outline" size={24} color="#dc2626" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.editButton}>
+                        <Ionicons name="create-outline" size={24} color="#964b00" />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -123,7 +174,7 @@ const AnimalDetailScreen = ({ navigation, route }) => {
                         <View style={styles.statDivider} />
                         <View style={styles.statItem}>
                             <Text style={styles.statLabel}>Umur</Text>
-                            <Text style={styles.statValue}>-</Text>
+                            <Text style={styles.statValue}>{calculateAge(animal.birthDate)}</Text>
                         </View>
                     </View>
                 </View>
