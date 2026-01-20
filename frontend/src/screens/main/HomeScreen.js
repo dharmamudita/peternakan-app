@@ -3,7 +3,7 @@
  * Halaman beranda dengan tema putih + coklat
  */
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,18 +12,56 @@ import {
     TouchableOpacity,
     Dimensions,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { animalApi, productApi, courseApi } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const { user } = useAuth();
+    const [dashboardData, setDashboardData] = useState({
+        totalAnimals: 0,
+        totalProducts: 0,
+        totalCourses: 0,
+    });
+
+    useFocusEffect(
+        useCallback(() => {
+            const loadDashboardData = async () => {
+                try {
+                    // Panggil API secara paralel agar cepat
+                    const [statsRes, productsRes, coursesRes] = await Promise.all([
+                        animalApi.getStats(),
+                        productApi.getAll({ limit: 1 }),
+                        courseApi.getAll({ limit: 1 })
+                    ]);
+
+                    // Unwrap responses
+                    const statsData = statsRes.data || statsRes || {};
+                    const productsWrapper = productsRes.data || productsRes || {};
+                    const coursesWrapper = coursesRes.data || coursesRes || {};
+
+                    // Extract totals
+                    setDashboardData({
+                        totalAnimals: statsData.total || 0,
+                        totalProducts: productsWrapper.pagination?.total || 0,
+                        totalCourses: coursesWrapper.pagination?.total || 0,
+                    });
+                } catch (error) {
+                    // Silent fail, keep default 0 or old data
+                    console.log('Home Dashboard Load Error:', error.message);
+                }
+            };
+            loadDashboardData();
+        }, [])
+    );
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -39,9 +77,9 @@ const HomeScreen = ({ navigation }) => {
     };
 
     const stats = [
-        { label: 'Total Hewan', value: '24', icon: 'paw', color: '#964b00' },
-        { label: 'Produk Aktif', value: '12', icon: 'cube', color: '#7c3f06' },
-        { label: 'Kursus', value: '3', icon: 'book', color: '#b87333' },
+        { label: 'Total Hewan', value: dashboardData.totalAnimals.toString(), icon: 'paw', color: '#964b00' },
+        { label: 'Produk Aktif', value: dashboardData.totalProducts.toString(), icon: 'cube', color: '#7c3f06' },
+        { label: 'Kursus', value: dashboardData.totalCourses.toString(), icon: 'book', color: '#b87333' },
     ];
 
     const menuItems = [
