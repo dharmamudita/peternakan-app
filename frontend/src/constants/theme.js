@@ -1,68 +1,68 @@
 /**
  * Theme Colors - Peternakan App
- * Kombinasi Coklat Neon + Putih yang Modern
+ * Tema Putih + Coklat Premium (#964b00 dan #7c3f06)
  */
 
 export const COLORS = {
-    // Primary Colors - Coklat Neon
-    primary: '#D4A574',        // Coklat Muda/Neon
-    primaryDark: '#8B6914',    // Coklat Tua
-    primaryLight: '#E8C8A0',   // Coklat Sangat Muda
-    primaryNeon: '#FFB347',    // Orange Neon (Aksen)
+    // Primary Colors - Coklat
+    primary: '#964b00',        // Coklat Utama
+    primaryDark: '#7c3f06',    // Coklat Tua
+    primaryLight: '#b87333',   // Coklat Muda
+    primaryAccent: '#c9a86c',  // Aksen Coklat
 
     // Secondary Colors
-    secondary: '#2C1810',      // Coklat Gelap
-    secondaryLight: '#5D4037', // Coklat Medium
+    secondary: '#5d3a1a',      // Coklat Gelap
+    secondaryLight: '#8b5a2b', // Coklat Medium
 
-    // Accent Colors - Neon
-    accent: '#FF6B35',         // Orange Neon Terang
-    accentGold: '#FFD700',     // Gold Neon
+    // Accent Colors
+    accent: '#964b00',         // Sama dengan primary
+    accentGold: '#c9a86c',     // Gold Coklat
     accentGreen: '#4CAF50',    // Hijau untuk Success
 
     // Neutral Colors
     white: '#FFFFFF',
-    offWhite: '#FFF8F0',       // Putih Cream
-    cream: '#FDF5E6',
+    offWhite: '#faf8f5',       // Putih Cream
+    cream: '#f5f2ed',
     lightGray: '#F5F5F5',
     gray: '#9E9E9E',
     darkGray: '#424242',
     black: '#1A1A1A',
 
     // Background
-    background: '#FFF8F0',     // Cream Putih
-    backgroundDark: '#2C1810', // Coklat Gelap
+    background: '#ffffff',     // Putih Bersih
+    backgroundDark: '#7c3f06', // Coklat Gelap
     card: '#FFFFFF',
 
     // Status Colors
     success: '#4CAF50',
     warning: '#FF9800',
-    error: '#F44336',
+    error: '#dc2626',
     info: '#2196F3',
 
     // Text Colors
-    text: '#2C1810',           // Coklat Gelap
-    textLight: '#8B6914',      // Coklat Medium
-    textMuted: '#9E9E9E',
+    text: '#1f1f1f',           // Hitam
+    textLight: '#6b7280',      // Abu
+    textMuted: '#9ca3af',
     textOnPrimary: '#FFFFFF',
 
     // Gradient Colors
-    gradientStart: '#D4A574',
-    gradientEnd: '#8B6914',
+    gradientStart: '#964b00',
+    gradientEnd: '#7c3f06',
 
     // Shadow
-    shadow: '#2C1810',
+    shadow: '#000000',
 
     // Overlay
-    overlay: 'rgba(44, 24, 16, 0.7)',
+    overlay: 'rgba(0, 0, 0, 0.5)',
 };
 
 export const GRADIENTS = {
-    primary: ['#D4A574', '#8B6914'],
-    secondary: ['#FFB347', '#FF6B35'],
-    dark: ['#5D4037', '#2C1810'],
-    light: ['#FFF8F0', '#E8C8A0'],
-    gold: ['#FFD700', '#FF8C00'],
-    sunset: ['#FF6B35', '#D4A574'],
+    primary: ['#964b00', '#7c3f06'],
+    secondary: ['#b87333', '#964b00'],
+    dark: ['#5d3a1a', '#3d2510'],
+    light: ['#ffffff', '#faf8f5'],
+    gold: ['#c9a86c', '#964b00'],
+    sunset: ['#b87333', '#7c3f06'],
 };
 
 export const FONTS = {
@@ -107,28 +107,28 @@ export const SHADOWS = {
     small: {
         shadowColor: COLORS.shadow,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.08,
         shadowRadius: 4,
         elevation: 2,
     },
     medium: {
         shadowColor: COLORS.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.12,
         shadowRadius: 8,
         elevation: 4,
     },
     large: {
         shadowColor: COLORS.shadow,
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.16,
         shadowRadius: 16,
         elevation: 8,
     },
     glow: {
-        shadowColor: COLORS.primaryNeon,
+        shadowColor: COLORS.primary,
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
+        shadowOpacity: 0.3,
         shadowRadius: 12,
         elevation: 10,
     },

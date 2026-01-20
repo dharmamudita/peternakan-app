@@ -1,9 +1,9 @@
 /**
  * Home Screen
- * Dashboard utama dengan animasi dan stats
+ * Halaman beranda dengan tema putih + coklat
  */
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
     View,
     Text,
@@ -11,23 +11,12 @@ import {
     ScrollView,
     TouchableOpacity,
     Dimensions,
-    RefreshControl,
-    Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-    FadeInDown,
-    FadeInRight,
-    useSharedValue,
-    useAnimatedStyle,
-    withSpring,
-    withTiming,
-    withSequence,
-} from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, GRADIENTS, SIZES, SHADOWS } from '../../constants/theme';
-import { Card, Button } from '../../components/common';
+import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
@@ -35,151 +24,204 @@ const { width } = Dimensions.get('window');
 const HomeScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const { user } = useAuth();
-    const [refreshing, setRefreshing] = useState(false);
 
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setRefreshing(false);
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Selamat Pagi';
+        if (hour < 15) return 'Selamat Siang';
+        if (hour < 18) return 'Selamat Sore';
+        return 'Selamat Malam';
     };
 
+    const getDate = () => {
+        const options = { weekday: 'long', day: 'numeric', month: 'long' };
+        return new Date().toLocaleDateString('id-ID', options);
+    };
+
+    const stats = [
+        { label: 'Total Hewan', value: '24', icon: 'paw', color: '#964b00' },
+        { label: 'Produk Aktif', value: '12', icon: 'cube', color: '#7c3f06' },
+        { label: 'Kursus', value: '3', icon: 'book', color: '#b87333' },
+    ];
+
     const menuItems = [
-        { id: 'farm', title: 'Peternakan', icon: '🐄', color: COLORS.primary, screen: 'FarmTab' },
-        { id: 'market', title: 'Marketplace', icon: '🛒', color: COLORS.accent, screen: 'MarketTab' },
-        { id: 'education', title: 'Edukasi', icon: '📚', color: COLORS.success, screen: 'EducationTab' },
-        { id: 'profile', title: 'Profil', icon: '👤', color: COLORS.info, screen: 'ProfileTab' },
+        {
+            id: 1,
+            title: 'Peternakan',
+            subtitle: 'Kelola hewan',
+            icon: 'paw',
+            gradient: ['#964b00', '#7c3f06'],
+            onPress: () => navigation.navigate('PeternakanTab'),
+        },
+        {
+            id: 2,
+            title: 'Marketplace',
+            subtitle: 'Jual beli',
+            icon: 'cart',
+            gradient: ['#7c3f06', '#5d3a1a'],
+            onPress: () => navigation.navigate('MarketTab'),
+        },
+        {
+            id: 3,
+            title: 'Edukasi',
+            subtitle: 'Belajar',
+            icon: 'school',
+            gradient: ['#b87333', '#964b00'],
+            onPress: () => navigation.navigate('EdukasiTab'),
+        },
+        {
+            id: 4,
+            title: 'Profil',
+            subtitle: 'Akun saya',
+            icon: 'person',
+            gradient: ['#5d3a1a', '#3d2510'],
+            onPress: () => navigation.navigate('ProfileTab'),
+        },
     ];
 
-    const quickStats = [
-        { id: 1, label: 'Total Hewan', value: '24', icon: 'paw', color: COLORS.primary },
-        { id: 2, label: 'Produk Aktif', value: '12', icon: 'cube', color: COLORS.accent },
-        { id: 3, label: 'Kursus Diikuti', value: '3', icon: 'book', color: COLORS.success },
+    const quickActions = [
+        { id: 1, title: 'Tambah Hewan', icon: 'add-circle', color: '#964b00' },
+        { id: 2, title: 'Catat Kesehatan', icon: 'medical', color: '#7c3f06' },
     ];
 
-    const recentActivities = [
-        { id: 1, type: 'health', title: 'Pemeriksaan Sapi #12', time: '2 jam lalu', icon: 'medkit' },
-        { id: 2, type: 'order', title: 'Pesanan baru #ORD241019', time: '5 jam lalu', icon: 'cart' },
-        { id: 3, type: 'course', title: 'Menyelesaikan Modul 3', time: '1 hari lalu', icon: 'school' },
+    const activities = [
+        { id: 1, title: 'Sapi Brahma - Vaksinasi', time: '2 jam lalu', icon: 'medical', color: '#964b00' },
+        { id: 2, title: 'Pesanan Baru dari Ahmad', time: '5 jam lalu', icon: 'cart', color: '#7c3f06' },
+        { id: 3, title: 'Kambing Etawa - Lahiran', time: '1 hari lalu', icon: 'heart', color: '#b87333' },
     ];
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={handleRefresh}
-                        colors={[COLORS.primary]}
-                        tintColor={COLORS.primary}
-                    />
-                }
-            >
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                 {/* Header */}
-                <Animated.View
-                    entering={FadeInDown.duration(500)}
-                    style={styles.header}
-                >
-                    <LinearGradient
-                        colors={GRADIENTS.primary}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.headerGradient}
-                    >
-                        <View style={styles.headerContent}>
-                            <View style={styles.headerLeft}>
-                                <Text style={styles.greeting}>Selamat Datang! 👋</Text>
-                                <Text style={styles.userName}>{user?.displayName || 'Peternak'}</Text>
-                            </View>
-                            <TouchableOpacity style={styles.notificationBtn}>
-                                <Ionicons name="notifications-outline" size={24} color={COLORS.white} />
-                                <View style={styles.notificationBadge}>
-                                    <Text style={styles.badgeText}>3</Text>
-                                </View>
+                <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
+                    <View style={styles.headerTop}>
+                        <View style={styles.headerLeft}>
+                            <Text style={styles.greeting}>{getGreeting()} 👋</Text>
+                            <Text style={styles.userName}>{user?.displayName || 'Peternak'}</Text>
+                        </View>
+                        <View style={styles.headerRight}>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Ionicons name="search-outline" size={22} color="#374151" />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Ionicons name="notifications-outline" size={22} color="#374151" />
+                                <View style={styles.notifBadge} />
                             </TouchableOpacity>
                         </View>
+                    </View>
+                </Animated.View>
 
-                        {/* Search Bar */}
-                        <TouchableOpacity style={styles.searchBar}>
-                            <Ionicons name="search" size={20} color={COLORS.gray} />
-                            <Text style={styles.searchPlaceholder}>Cari produk, materi, atau hewan...</Text>
-                        </TouchableOpacity>
+                {/* Summary Card */}
+                <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.summarySection}>
+                    <LinearGradient
+                        colors={['#964b00', '#7c3f06']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.summaryCard}
+                    >
+                        <View style={styles.summaryDecor1} />
+                        <View style={styles.summaryDecor2} />
+
+                        <View style={styles.summaryHeader}>
+                            <Text style={styles.summaryTitle}>Ringkasan Hari Ini</Text>
+                            <View style={styles.dateBadge}>
+                                <Text style={styles.dateText}>{getDate()}</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.statsRow}>
+                            {stats.map((stat, index) => (
+                                <View key={index} style={styles.statItem}>
+                                    <View style={styles.statIconBg}>
+                                        <Ionicons name={stat.icon} size={18} color="#ffffff" />
+                                    </View>
+                                    <Text style={styles.statValue}>{stat.value}</Text>
+                                    <Text style={styles.statLabel}>{stat.label}</Text>
+                                </View>
+                            ))}
+                        </View>
                     </LinearGradient>
                 </Animated.View>
 
-                {/* Quick Stats */}
-                <Animated.View
-                    entering={FadeInDown.duration(500).delay(100)}
-                    style={styles.statsContainer}
-                >
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.statsScrollContent}
-                    >
-                        {quickStats.map((stat, index) => (
-                            <StatCard key={stat.id} stat={stat} index={index} />
-                        ))}
-                    </ScrollView>
-                </Animated.View>
-
                 {/* Menu Grid */}
-                <Animated.View
-                    entering={FadeInDown.duration(500).delay(200)}
-                    style={styles.section}
-                >
+                <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.section}>
                     <Text style={styles.sectionTitle}>Menu Utama</Text>
                     <View style={styles.menuGrid}>
                         {menuItems.map((item, index) => (
-                            <MenuItem
+                            <Animated.View
                                 key={item.id}
-                                item={item}
-                                index={index}
-                                onPress={() => navigation.navigate(item.screen)}
-                            />
+                                entering={FadeInUp.delay(index * 80).duration(400)}
+                                style={styles.menuItemWrapper}
+                            >
+                                <TouchableOpacity
+                                    style={styles.menuCard}
+                                    onPress={item.onPress}
+                                    activeOpacity={0.9}
+                                >
+                                    <LinearGradient
+                                        colors={item.gradient}
+                                        style={styles.menuIconGradient}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                    >
+                                        <Ionicons name={item.icon} size={28} color="#ffffff" />
+                                    </LinearGradient>
+                                    <Text style={styles.menuTitle}>{item.title}</Text>
+                                    <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        ))}
+                    </View>
+                </Animated.View>
+
+                {/* Quick Actions */}
+                <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.section}>
+                    <Text style={styles.sectionTitle}>Aksi Cepat</Text>
+                    <View style={styles.actionsRow}>
+                        {quickActions.map((action, index) => (
+                            <Animated.View
+                                key={action.id}
+                                entering={FadeInRight.delay(index * 100).duration(400)}
+                                style={styles.actionWrapper}
+                            >
+                                <TouchableOpacity style={styles.actionCard} activeOpacity={0.9}>
+                                    <View style={[styles.actionIcon, { backgroundColor: action.color + '15' }]}>
+                                        <Ionicons name={action.icon} size={22} color={action.color} />
+                                    </View>
+                                    <Text style={styles.actionTitle}>{action.title}</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
                         ))}
                     </View>
                 </Animated.View>
 
                 {/* Recent Activities */}
-                <Animated.View
-                    entering={FadeInDown.duration(500).delay(300)}
-                    style={styles.section}
-                >
+                <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Aktivitas Terbaru</Text>
                         <TouchableOpacity>
                             <Text style={styles.seeAll}>Lihat Semua</Text>
                         </TouchableOpacity>
                     </View>
-                    {recentActivities.map((activity, index) => (
-                        <ActivityItem key={activity.id} activity={activity} index={index} />
-                    ))}
-                </Animated.View>
-
-                {/* Quick Actions */}
-                <Animated.View
-                    entering={FadeInDown.duration(500).delay(400)}
-                    style={styles.section}
-                >
-                    <Text style={styles.sectionTitle}>Aksi Cepat</Text>
-                    <View style={styles.actionButtons}>
-                        <Button
-                            title="Tambah Hewan"
-                            variant="primary"
-                            size="medium"
-                            icon={<Ionicons name="add-circle" size={20} color={COLORS.white} />}
-                            onPress={() => { }}
-                            style={styles.actionButton}
-                        />
-                        <Button
-                            title="Jual Produk"
-                            variant="secondary"
-                            size="medium"
-                            icon={<Ionicons name="pricetag" size={20} color={COLORS.white} />}
-                            onPress={() => { }}
-                            style={styles.actionButton}
-                        />
+                    <View style={styles.activitiesList}>
+                        {activities.map((activity, index) => (
+                            <Animated.View
+                                key={activity.id}
+                                entering={FadeInUp.delay(index * 100).duration(400)}
+                            >
+                                <TouchableOpacity style={styles.activityCard} activeOpacity={0.9}>
+                                    <View style={[styles.activityIcon, { backgroundColor: activity.color + '15' }]}>
+                                        <Ionicons name={activity.icon} size={20} color={activity.color} />
+                                    </View>
+                                    <View style={styles.activityContent}>
+                                        <Text style={styles.activityTitle}>{activity.title}</Text>
+                                        <Text style={styles.activityTime}>{activity.time}</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={18} color="#d1d5db" />
+                                </TouchableOpacity>
+                            </Animated.View>
+                        ))}
                     </View>
                 </Animated.View>
 
@@ -189,179 +231,133 @@ const HomeScreen = ({ navigation }) => {
     );
 };
 
-const StatCard = ({ stat, index }) => {
-    const scale = useSharedValue(0);
-
-    useEffect(() => {
-        scale.value = withSpring(1, { damping: 10, delay: index * 100 });
-    }, []);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-    }));
-
-    return (
-        <Animated.View style={[styles.statCard, animatedStyle, { backgroundColor: stat.color + '15' }]}>
-            <View style={[styles.statIconContainer, { backgroundColor: stat.color }]}>
-                <Ionicons name={stat.icon} size={20} color={COLORS.white} />
-            </View>
-            <Text style={styles.statValue}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
-        </Animated.View>
-    );
-};
-
-const MenuItem = ({ item, index, onPress }) => {
-    const scale = useSharedValue(1);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
-    }));
-
-    const handlePressIn = () => {
-        scale.value = withSpring(0.95);
-    };
-
-    const handlePressOut = () => {
-        scale.value = withSpring(1);
-    };
-
-    return (
-        <Animated.View
-            entering={FadeInRight.duration(400).delay(index * 100)}
-            style={animatedStyle}
-        >
-            <TouchableOpacity
-                style={styles.menuItem}
-                onPress={onPress}
-                onPressIn={handlePressIn}
-                onPressOut={handlePressOut}
-                activeOpacity={0.9}
-            >
-                <View style={[styles.menuIconContainer, { backgroundColor: item.color + '20' }]}>
-                    <Text style={styles.menuEmoji}>{item.icon}</Text>
-                </View>
-                <Text style={styles.menuTitle}>{item.title}</Text>
-            </TouchableOpacity>
-        </Animated.View>
-    );
-};
-
-const ActivityItem = ({ activity, index }) => (
-    <Animated.View entering={FadeInRight.duration(400).delay(index * 100)}>
-        <Card style={styles.activityCard} animate={false}>
-            <View style={styles.activityContent}>
-                <View style={[styles.activityIcon, { backgroundColor: COLORS.primary + '20' }]}>
-                    <Ionicons name={activity.icon} size={20} color={COLORS.primary} />
-                </View>
-                <View style={styles.activityInfo}>
-                    <Text style={styles.activityTitle}>{activity.title}</Text>
-                    <Text style={styles.activityTime}>{activity.time}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={COLORS.gray} />
-            </View>
-        </Card>
-    </Animated.View>
-);
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: '#ffffff',
+    },
+    scrollContent: {
+        paddingBottom: 40,
     },
     header: {
-        marginBottom: 16,
-    },
-    headerGradient: {
         paddingHorizontal: SIZES.padding,
-        paddingTop: 16,
-        paddingBottom: 24,
-        borderBottomLeftRadius: SIZES.radiusLarge,
-        borderBottomRightRadius: SIZES.radiusLarge,
+        paddingTop: 8,
+        paddingBottom: 16,
     },
-    headerContent: {
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    headerLeft: {},
+    greeting: {
+        fontSize: 14,
+        color: '#6b7280',
+        marginBottom: 2,
+    },
+    userName: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#111827',
+        letterSpacing: -0.5,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    iconButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#faf8f5',
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...SHADOWS.small,
+    },
+    notifBadge: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#dc2626',
+    },
+    summarySection: {
+        paddingHorizontal: SIZES.padding,
+        marginBottom: 24,
+    },
+    summaryCard: {
+        borderRadius: 24,
+        padding: 20,
+        overflow: 'hidden',
+        ...SHADOWS.large,
+    },
+    summaryDecor1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        top: -40,
+        right: -20,
+    },
+    summaryDecor2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        bottom: -20,
+        left: 20,
+    },
+    summaryHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 20,
     },
-    headerLeft: {},
-    greeting: {
-        fontSize: SIZES.body,
-        color: COLORS.offWhite,
-        marginBottom: 4,
-    },
-    userName: {
-        fontSize: SIZES.h2,
-        fontWeight: '800',
-        color: COLORS.white,
-    },
-    notificationBtn: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    notificationBadge: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        backgroundColor: COLORS.accent,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    badgeText: {
-        fontSize: 10,
+    summaryTitle: {
+        fontSize: 16,
         fontWeight: '700',
-        color: COLORS.white,
+        color: '#ffffff',
     },
-    searchBar: {
+    dateBadge: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 10,
+    },
+    dateText: {
+        fontSize: 11,
+        color: '#ffffff',
+        fontWeight: '500',
+    },
+    statsRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.white,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderRadius: SIZES.radius,
-        gap: 12,
+        justifyContent: 'space-between',
     },
-    searchPlaceholder: {
-        fontSize: SIZES.body,
-        color: COLORS.gray,
-    },
-    statsContainer: {
-        marginBottom: 24,
-    },
-    statsScrollContent: {
-        paddingHorizontal: SIZES.padding,
-        gap: 12,
-    },
-    statCard: {
-        width: 120,
-        padding: 16,
-        borderRadius: SIZES.radius,
+    statItem: {
         alignItems: 'center',
     },
-    statIconContainer: {
+    statIconBg: {
         width: 40,
         height: 40,
-        borderRadius: 20,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.2)',
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 8,
     },
     statValue: {
-        fontSize: SIZES.h2,
+        fontSize: 24,
         fontWeight: '800',
-        color: COLORS.text,
+        color: '#ffffff',
+        marginBottom: 2,
     },
     statLabel: {
-        fontSize: SIZES.caption,
-        color: COLORS.textLight,
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.8)',
     },
     section: {
         paddingHorizontal: SIZES.padding,
@@ -374,81 +370,115 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     sectionTitle: {
-        fontSize: SIZES.h3,
+        fontSize: 18,
         fontWeight: '700',
-        color: COLORS.text,
+        color: '#111827',
         marginBottom: 16,
     },
     seeAll: {
-        fontSize: SIZES.bodySmall,
-        color: COLORS.primary,
+        fontSize: 14,
+        color: '#964b00',
         fontWeight: '600',
     },
     menuGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 16,
-        justifyContent: 'space-between',
+        gap: 12,
     },
-    menuItem: {
-        width: (width - SIZES.padding * 2 - 16) / 2,
-        backgroundColor: COLORS.white,
-        padding: 20,
-        borderRadius: SIZES.radiusLarge,
+    menuItemWrapper: {
+        width: (width - SIZES.padding * 2 - 12) / 2,
+    },
+    menuCard: {
+        backgroundColor: '#ffffff',
+        borderRadius: 20,
+        padding: 18,
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
         ...SHADOWS.small,
     },
-    menuIconContainer: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
+    menuIconGradient: {
+        width: 56,
+        height: 56,
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
     },
-    menuEmoji: {
-        fontSize: 32,
-    },
     menuTitle: {
-        fontSize: SIZES.body,
-        fontWeight: '600',
-        color: COLORS.text,
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 2,
     },
-    activityCard: {
-        marginBottom: 12,
-        padding: 16,
+    menuSubtitle: {
+        fontSize: 12,
+        color: '#9ca3af',
     },
-    activityContent: {
+    actionsRow: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    actionWrapper: {
+        flex: 1,
+    },
+    actionCard: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
+        backgroundColor: '#ffffff',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
+        ...SHADOWS.small,
+    },
+    actionIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    actionTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#374151',
+        flex: 1,
+    },
+    activitiesList: {
+        gap: 10,
+    },
+    activityCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ffffff',
+        padding: 14,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
+        ...SHADOWS.small,
     },
     activityIcon: {
         width: 44,
         height: 44,
-        borderRadius: 22,
+        borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
+        marginRight: 12,
     },
-    activityInfo: {
+    activityContent: {
         flex: 1,
     },
     activityTitle: {
-        fontSize: SIZES.body,
+        fontSize: 14,
         fontWeight: '600',
-        color: COLORS.text,
+        color: '#111827',
         marginBottom: 2,
     },
     activityTime: {
-        fontSize: SIZES.caption,
-        color: COLORS.textMuted,
-    },
-    actionButtons: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    actionButton: {
-        flex: 1,
+        fontSize: 12,
+        color: '#9ca3af',
     },
 });
 

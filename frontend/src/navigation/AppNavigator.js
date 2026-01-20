@@ -32,6 +32,7 @@ import {
     EducationScreen,
     ProfileScreen,
     SellerRegistrationScreen,
+    SellerDashboardScreen,
 } from '../screens';
 
 const Stack = createStackNavigator();
@@ -175,6 +176,7 @@ const AppNavigator = () => {
                     <>
                         <Stack.Screen name="MainTabs" component={MainTabs} />
                         <Stack.Screen name="SellerRegistration" component={SellerRegistrationScreen} />
+                        <Stack.Screen name="SellerDashboard" component={SellerDashboardScreen} />
                     </>
                 ) : (
                     <Stack.Screen name="Auth" component={AuthStack} />

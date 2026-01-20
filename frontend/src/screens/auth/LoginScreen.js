@@ -1,3 +1,8 @@
+/**
+ * Login Screen
+ * Halaman login dengan tema putih + coklat
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -9,15 +14,16 @@ import {
     TouchableOpacity,
     Dimensions,
     Alert,
+    TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
     FadeInDown,
     FadeInUp,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, GRADIENTS, SIZES, SHADOWS } from '../../constants/theme';
-import { Button, Input } from '../../components/common';
+import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { authApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useGoogleAuth, processGoogleAuthResponse } from '../../services/googleAuth';
@@ -26,9 +32,11 @@ import { useFacebookAuth, processFacebookAuthResponse } from '../../services/fac
 const { width, height } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
+    const insets = useSafeAreaInsets();
     const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [facebookLoading, setFacebookLoading] = useState(false);
@@ -123,10 +131,9 @@ const LoginScreen = ({ navigation }) => {
 
     const handleGoogleLogin = async () => {
         if (!request) {
-            Alert.alert(
+            showAlert(
                 'Konfigurasi Diperlukan',
-                'Google Sign-In belum dikonfigurasi. Silakan isi Google Client ID di file firebase.js',
-                [{ text: 'OK' }]
+                'Google Sign-In belum dikonfigurasi. Silakan isi Google Client ID di file firebase.js'
             );
             return;
         }
@@ -173,7 +180,7 @@ const LoginScreen = ({ navigation }) => {
     };
 
     const handleFacebookLogin = async () => {
-        // Khusus Web: Gunakan Popup flow untuk menghindari error session storage
+        // Khusus Web: Gunakan Popup flow
         if (Platform.OS === 'web') {
             try {
                 setFacebookLoading(true);
@@ -200,10 +207,9 @@ const LoginScreen = ({ navigation }) => {
 
         // Native (Android/iOS): Gunakan Expo Auth Session
         if (!fbRequest) {
-            Alert.alert(
+            showAlert(
                 'Konfigurasi Diperlukan',
-                'Facebook Sign-In belum dikonfigurasi. Silakan isi Facebook App ID di file firebase.js',
-                [{ text: 'OK' }]
+                'Facebook Sign-In belum dikonfigurasi. Silakan isi Facebook App ID di file firebase.js'
             );
             return;
         }
@@ -234,7 +240,6 @@ const LoginScreen = ({ navigation }) => {
             const response = await authApi.login({ email, password });
 
             if (response.success || response.token) {
-                // Handle different response structures (just in case)
                 const token = response.token || response.data?.token;
                 const user = response.user || response.data?.user;
 
@@ -255,15 +260,13 @@ const LoginScreen = ({ navigation }) => {
     };
 
     return (
-        <View style={styles.container}>
-            <LinearGradient
-                colors={GRADIENTS.light}
-                style={StyleSheet.absoluteFill}
-            />
-
-            {/* Decorative circles */}
-            <View style={[styles.circle, styles.circle1]} />
-            <View style={[styles.circle, styles.circle2]} />
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+            {/* Background */}
+            <View style={styles.backgroundContainer}>
+                <View style={[styles.decorCircle, styles.decorCircle1]} />
+                <View style={[styles.decorCircle, styles.decorCircle2]} />
+                <View style={[styles.decorCircle, styles.decorCircle3]} />
+            </View>
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -281,113 +284,141 @@ const LoginScreen = ({ navigation }) => {
                     >
                         <View style={styles.logoContainer}>
                             <LinearGradient
-                                colors={GRADIENTS.primary}
+                                colors={['#964b00', '#7c3f06']}
                                 style={styles.logoGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
                             >
                                 <Text style={styles.logoEmoji}>🐄</Text>
                             </LinearGradient>
                         </View>
-                        <Text style={styles.title}>Selamat Datang!</Text>
-                        <Text style={styles.subtitle}>Masuk ke akun Anda</Text>
+                        <Text style={styles.welcomeText}>Selamat Datang!</Text>
+                        <Text style={styles.subtitleText}>Masuk ke akun Peternakan App</Text>
                     </Animated.View>
 
-                    {/* Form */}
+                    {/* Form Card */}
                     <Animated.View
-                        entering={FadeInDown.duration(600).delay(300)}
-                        style={styles.form}
+                        entering={FadeInDown.duration(600).delay(200)}
+                        style={styles.formCard}
                     >
                         {errors.general && (
-                            <View style={styles.errorContainer}>
-                                <Ionicons name="alert-circle" size={20} color={COLORS.error} />
-                                <Text style={styles.errorText}>{errors.general}</Text>
+                            <View style={styles.errorBanner}>
+                                <Ionicons name="alert-circle" size={18} color="#dc2626" />
+                                <Text style={styles.errorBannerText}>{errors.general}</Text>
                             </View>
                         )}
 
-                        <Input
-                            label="Email"
-                            value={email}
-                            onChangeText={setEmail}
-                            placeholder="Masukkan email"
-                            keyboardType="email-address"
-                            error={errors.email}
-                            leftIcon={<Ionicons name="mail-outline" size={20} color={COLORS.gray} />}
-                        />
+                        {/* Email Input */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Email</Text>
+                            <View style={[styles.inputContainer, errors.email && styles.inputError]}>
+                                <Ionicons name="mail-outline" size={20} color="#9ca3af" />
+                                <TextInput
+                                    style={styles.textInput}
+                                    value={email}
+                                    onChangeText={setEmail}
+                                    placeholder="nama@email.com"
+                                    placeholderTextColor="#9ca3af"
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                />
+                            </View>
+                            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+                        </View>
 
-                        <Input
-                            label="Password"
-                            value={password}
-                            onChangeText={setPassword}
-                            placeholder="Masukkan password"
-                            secureTextEntry
-                            error={errors.password}
-                            leftIcon={<Ionicons name="lock-closed-outline" size={20} color={COLORS.gray} />}
-                        />
+                        {/* Password Input */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Password</Text>
+                            <View style={[styles.inputContainer, errors.password && styles.inputError]}>
+                                <Ionicons name="lock-closed-outline" size={20} color="#9ca3af" />
+                                <TextInput
+                                    style={styles.textInput}
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    placeholder="Masukkan password"
+                                    placeholderTextColor="#9ca3af"
+                                    secureTextEntry={!showPassword}
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                    <Ionicons
+                                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                                        size={20}
+                                        color="#9ca3af"
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+                        </View>
 
+                        {/* Forgot Password */}
                         <TouchableOpacity
-                            style={styles.forgotPassword}
+                            style={styles.forgotButton}
                             onPress={handleForgotPassword}
                             disabled={loading}
                         >
-                            <Text style={styles.forgotPasswordText}>Lupa Password?</Text>
+                            <Text style={styles.forgotText}>Lupa Password?</Text>
                         </TouchableOpacity>
 
-                        <Button
-                            title="Masuk"
+                        {/* Login Button */}
+                        <TouchableOpacity
+                            style={[styles.loginButton, loading && styles.buttonDisabled]}
                             onPress={handleLogin}
-                            loading={loading}
-                            fullWidth
-                            size="large"
-                            style={styles.loginButton}
-                        />
+                            disabled={loading}
+                            activeOpacity={0.9}
+                        >
+                            <LinearGradient
+                                colors={['#964b00', '#7c3f06']}
+                                style={styles.loginButtonGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                            >
+                                {loading ? (
+                                    <Text style={styles.loginButtonText}>Memproses...</Text>
+                                ) : (
+                                    <>
+                                        <Text style={styles.loginButtonText}>Masuk</Text>
+                                        <View style={styles.loginButtonIcon}>
+                                            <Ionicons name="arrow-forward" size={18} color="#964b00" />
+                                        </View>
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
 
                         {/* Divider */}
                         <View style={styles.divider}>
                             <View style={styles.dividerLine} />
-                            <Text style={styles.dividerText}>atau</Text>
+                            <Text style={styles.dividerText}>atau lanjutkan dengan</Text>
                             <View style={styles.dividerLine} />
                         </View>
 
                         {/* Social Login */}
-                        <View style={styles.socialButtons}>
+                        <View style={styles.socialRow}>
                             <TouchableOpacity
-                                style={[styles.googleButton, (googleLoading || googleAuthLoading) && styles.disabledButton]}
+                                style={[styles.socialButton, (googleLoading || googleAuthLoading) && styles.buttonDisabled]}
                                 onPress={handleGoogleLogin}
                                 disabled={googleLoading || googleAuthLoading}
+                                activeOpacity={0.8}
                             >
-                                {googleLoading ? (
-                                    <Text style={styles.googleButtonText}>Loading...</Text>
-                                ) : (
-                                    <>
-                                        <View style={styles.googleIconContainer}>
-                                            <Text style={styles.googleIcon}>G</Text>
-                                        </View>
-                                        <Text style={styles.googleButtonText}>Masuk dengan Google</Text>
-                                    </>
-                                )}
+                                <Text style={styles.googleIcon}>G</Text>
+                                <Text style={styles.socialButtonText}>Google</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={[styles.facebookButton, (facebookLoading || facebookAuthLoading) && styles.disabledButton]}
+                                style={[styles.socialButton, (facebookLoading || facebookAuthLoading) && styles.buttonDisabled]}
                                 onPress={handleFacebookLogin}
                                 disabled={facebookLoading || facebookAuthLoading}
+                                activeOpacity={0.8}
                             >
-                                {facebookLoading ? (
-                                    <Text style={styles.facebookButtonText}>Loading...</Text>
-                                ) : (
-                                    <>
-                                        <View style={styles.facebookIconContainer}>
-                                            <Ionicons name="logo-facebook" size={20} color="#ffffff" />
-                                        </View>
-                                        <Text style={styles.facebookButtonText}>Masuk dengan Facebook</Text>
-                                    </>
-                                )}
+                                <Ionicons name="logo-facebook" size={20} color="#1877F2" />
+                                <Text style={styles.socialButtonText}>Facebook</Text>
                             </TouchableOpacity>
                         </View>
                     </Animated.View>
 
                     {/* Footer */}
                     <Animated.View
-                        entering={FadeInUp.duration(600).delay(500)}
+                        entering={FadeInUp.duration(600).delay(400)}
                         style={styles.footer}
                     >
                         <Text style={styles.footerText}>Belum punya akun? </Text>
@@ -404,183 +435,214 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: '#ffffff',
     },
-    circle: {
+    backgroundContainer: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    decorCircle: {
         position: 'absolute',
         borderRadius: 1000,
-        backgroundColor: COLORS.primary,
-        opacity: 0.1,
     },
-    circle1: {
-        width: width * 0.8,
-        height: width * 0.8,
-        top: -width * 0.4,
+    decorCircle1: {
+        width: width * 0.7,
+        height: width * 0.7,
+        top: -width * 0.35,
         right: -width * 0.2,
+        backgroundColor: '#964b00',
+        opacity: 0.04,
     },
-    circle2: {
-        width: width * 0.6,
-        height: width * 0.6,
+    decorCircle2: {
+        width: width * 0.5,
+        height: width * 0.5,
         bottom: -width * 0.2,
-        left: -width * 0.3,
+        left: -width * 0.2,
+        backgroundColor: '#7c3f06',
+        opacity: 0.03,
+    },
+    decorCircle3: {
+        width: width * 0.3,
+        height: width * 0.3,
+        top: height * 0.4,
+        right: -width * 0.1,
+        backgroundColor: '#964b00',
+        opacity: 0.02,
     },
     keyboardView: {
         flex: 1,
     },
     scrollContent: {
         flexGrow: 1,
-        paddingHorizontal: SIZES.paddingLarge,
-        paddingTop: 80,
+        paddingHorizontal: SIZES.padding,
+        paddingTop: 40,
         paddingBottom: 40,
     },
     header: {
         alignItems: 'center',
-        marginBottom: 40,
+        marginBottom: 32,
     },
     logoContainer: {
-        marginBottom: 24,
-    },
-    logoGradient: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
+        marginBottom: 20,
         ...SHADOWS.large,
     },
+    logoGradient: {
+        width: 90,
+        height: 90,
+        borderRadius: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     logoEmoji: {
-        fontSize: 40,
+        fontSize: 48,
     },
-    title: {
-        fontSize: SIZES.h1,
+    welcomeText: {
+        fontSize: 28,
         fontWeight: '800',
-        color: COLORS.text,
-        marginBottom: 8,
+        color: '#111827',
+        marginBottom: 6,
+        letterSpacing: -0.5,
     },
-    subtitle: {
-        fontSize: SIZES.body,
-        color: COLORS.textLight,
+    subtitleText: {
+        fontSize: 15,
+        color: '#6b7280',
     },
-    form: {
+    formCard: {
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        padding: 24,
         marginBottom: 24,
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
+        ...SHADOWS.medium,
     },
-    errorContainer: {
+    errorBanner: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.error + '10',
-        padding: 12,
-        borderRadius: SIZES.radius,
-        marginBottom: 16,
-        gap: 8,
+        backgroundColor: '#fef2f2',
+        padding: 14,
+        borderRadius: 14,
+        marginBottom: 20,
+        gap: 10,
+        borderWidth: 1,
+        borderColor: '#fecaca',
+    },
+    errorBannerText: {
+        color: '#dc2626',
+        fontSize: 13,
+        flex: 1,
+        fontWeight: '500',
+    },
+    inputGroup: {
+        marginBottom: 18,
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#374151',
+        marginBottom: 8,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#faf8f5',
+        borderRadius: 14,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
+        gap: 12,
+    },
+    inputError: {
+        borderColor: '#dc2626',
+        backgroundColor: '#fef2f2',
+    },
+    textInput: {
+        flex: 1,
+        fontSize: 15,
+        color: '#111827',
     },
     errorText: {
-        color: COLORS.error,
-        fontSize: SIZES.bodySmall,
-        flex: 1,
+        color: '#dc2626',
+        fontSize: 12,
+        marginTop: 6,
     },
-    forgotPassword: {
+    forgotButton: {
         alignSelf: 'flex-end',
-        marginBottom: 24,
+        marginBottom: 20,
     },
-    forgotPasswordText: {
-        color: COLORS.primary,
-        fontSize: SIZES.bodySmall,
+    forgotText: {
+        color: '#964b00',
+        fontSize: 13,
         fontWeight: '600',
     },
     loginButton: {
         marginBottom: 24,
+        ...SHADOWS.medium,
+    },
+    buttonDisabled: {
+        opacity: 0.7,
+    },
+    loginButtonGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        borderRadius: 14,
+        gap: 10,
+    },
+    loginButtonText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#ffffff',
+    },
+    loginButtonIcon: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#ffffff',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     divider: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 20,
     },
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: COLORS.lightGray,
+        backgroundColor: '#f0ebe3',
     },
     dividerText: {
-        color: COLORS.textMuted,
-        paddingHorizontal: 16,
-        fontSize: SIZES.bodySmall,
+        color: '#9ca3af',
+        paddingHorizontal: 14,
+        fontSize: 13,
     },
-    socialButtons: {
-        flexDirection: 'column',
-        alignItems: 'center',
+    socialRow: {
+        flexDirection: 'row',
         gap: 12,
     },
-    googleButton: {
+    socialButton: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: COLORS.white,
+        gap: 8,
+        backgroundColor: '#faf8f5',
         paddingVertical: 14,
-        paddingHorizontal: 24,
-        borderRadius: SIZES.radius,
-        width: '100%',
+        borderRadius: 14,
         borderWidth: 1,
-        borderColor: COLORS.lightGray,
-        ...SHADOWS.small,
-    },
-    googleIconContainer: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: '#fff',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
+        borderColor: '#f0ebe3',
     },
     googleIcon: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#4285F4',
+        color: '#ea4335',
     },
-    googleButtonText: {
-        fontSize: SIZES.body,
+    socialButtonText: {
+        fontSize: 14,
         fontWeight: '600',
-        color: COLORS.text,
-    },
-    facebookButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#1877F2',
-        paddingVertical: 14,
-        paddingHorizontal: 24,
-        borderRadius: SIZES.radius,
-        width: '100%',
-        ...SHADOWS.small,
-    },
-    facebookIconContainer: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: 'transparent',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
-    },
-    facebookButtonText: {
-        fontSize: SIZES.body,
-        fontWeight: '600',
-        color: '#ffffff',
-    },
-    disabledButton: {
-        opacity: 0.6,
-    },
-    socialButton: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: COLORS.white,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...SHADOWS.small,
-    },
-    socialIcon: {
-        fontSize: 24,
+        color: '#374151',
     },
     footer: {
         flexDirection: 'row',
@@ -588,12 +650,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     footerText: {
-        color: COLORS.textLight,
-        fontSize: SIZES.body,
+        color: '#6b7280',
+        fontSize: 14,
     },
     footerLink: {
-        color: COLORS.primary,
-        fontSize: SIZES.body,
+        color: '#964b00',
+        fontSize: 14,
         fontWeight: '700',
     },
 });

@@ -1,6 +1,6 @@
 /**
  * Farm Dashboard Screen
- * Halaman utama manajemen peternakan
+ * Halaman manajemen peternakan dengan tema putih + coklat
  */
 
 import React, { useState } from 'react';
@@ -10,274 +10,576 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    FlatList,
+    Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown, FadeInRight, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, GRADIENTS, SIZES, SHADOWS } from '../../constants/theme';
+import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { ANIMAL_TYPES } from '../../constants';
-import { Header, Card, Button } from '../../components/common';
+
+const { width } = Dimensions.get('window');
 
 const FarmDashboardScreen = ({ navigation }) => {
+    const insets = useSafeAreaInsets();
     const [selectedFilter, setSelectedFilter] = useState('all');
 
     const stats = [
-        { title: 'Total Hewan', value: '24', icon: 'paw', color: COLORS.primary },
-        { title: 'Sakit', value: '2', icon: 'medkit', color: COLORS.error },
-        { title: 'Hamil', value: '4', icon: 'heart', color: COLORS.accent },
-        { title: 'Anakan', value: '8', icon: 'egg', color: COLORS.warning },
+        { title: 'Total Hewan', value: '24', icon: 'paw', color: '#964b00', bgColor: '#faf8f5', trend: '+3' },
+        { title: 'Kondisi Sakit', value: '2', icon: 'medkit', color: '#dc2626', bgColor: '#fef2f2', trend: '-1' },
+        { title: 'Sedang Hamil', value: '4', icon: 'heart', color: '#7c3f06', bgColor: '#faf8f5', trend: '+2' },
+        { title: 'Anakan Baru', value: '8', icon: 'egg', color: '#b87333', bgColor: '#fdf5ef', trend: '+5' },
+    ];
+
+    const quickActions = [
+        { id: 1, title: 'Catat Kesehatan', icon: 'medical', gradient: ['#964b00', '#7c3f06'] },
+        { id: 2, title: 'Jadwal Pakan', icon: 'time', gradient: ['#7c3f06', '#5d3a1a'] },
+        { id: 3, title: 'Panen', icon: 'basket', gradient: ['#b87333', '#964b00'] },
     ];
 
     const animals = [
-        { id: '1', name: 'Sapi Brahma 01', type: 'CATTLE', status: 'Sehat', age: '2 Tahun', weight: '450kg', image: null },
-        { id: '2', name: 'Kambing Etawa 05', type: 'GOAT', status: 'Sakit', age: '1 Tahun', weight: '45kg', image: null },
-        { id: '3', name: 'Ayam Petelur 100', type: 'CHICKEN', status: 'Sehat', age: '6 Bulan', weight: '2kg', image: null },
+        { id: '1', name: 'Brahma 01', type: 'CATTLE', status: 'Sehat', age: '2 Tahun', weight: '450kg', lastCheck: '2 hari lalu' },
+        { id: '2', name: 'Etawa 05', type: 'GOAT', status: 'Sakit', age: '1 Tahun', weight: '45kg', lastCheck: '1 hari lalu' },
+        { id: '3', name: 'Petelur 100', type: 'CHICKEN', status: 'Sehat', age: '6 Bulan', weight: '2kg', lastCheck: '3 hari lalu' },
     ];
 
-    const renderStatCard = (item, index) => (
-        <Animated.View
-            entering={FadeInDown.delay(index * 100).duration(500)}
-            style={[styles.statWrapper, { width: '48%' }]}
-            key={index}
-        >
-            <Card style={styles.statCard}>
-                <View style={[styles.statIcon, { backgroundColor: item.color + '20' }]}>
-                    <Ionicons name={item.icon} size={24} color={item.color} />
-                </View>
-                <Text style={styles.statValue}>{item.value}</Text>
-                <Text style={styles.statTitle}>{item.title}</Text>
-            </Card>
-        </Animated.View>
+    const filters = [
+        { id: 'all', label: 'Semua' },
+        { id: 'healthy', label: 'Sehat' },
+        { id: 'sick', label: 'Sakit' },
+        { id: 'pregnant', label: 'Hamil' },
+    ];
+
+    return (
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                {/* Header */}
+                <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
+                    <View style={styles.headerTop}>
+                        <View style={styles.headerLeft}>
+                            <Text style={styles.headerSubtitle}>Manajemen Ternak 🐄</Text>
+                            <Text style={styles.headerTitle}>Peternakan Saya</Text>
+                        </View>
+                        <View style={styles.headerRight}>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Ionicons name="search-outline" size={22} color="#374151" />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Ionicons name="add" size={24} color="#374151" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Animated.View>
+
+                {/* Summary Card */}
+                <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.summarySection}>
+                    <LinearGradient
+                        colors={['#964b00', '#7c3f06']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.summaryCard}
+                    >
+                        <View style={styles.summaryDecor1} />
+                        <View style={styles.summaryDecor2} />
+
+                        <View style={styles.summaryContent}>
+                            <View style={styles.summaryLeft}>
+                                <Text style={styles.summaryLabel}>Total Hewan Ternak</Text>
+                                <Text style={styles.summaryValue}>24</Text>
+                                <View style={styles.trendBadge}>
+                                    <Ionicons name="trending-up" size={14} color="#ffffff" />
+                                    <Text style={styles.trendText}>+12% dari bulan lalu</Text>
+                                </View>
+                            </View>
+                            <View style={styles.summaryIcon}>
+                                <Text style={styles.summaryEmoji}>🐄</Text>
+                            </View>
+                        </View>
+                    </LinearGradient>
+                </Animated.View>
+
+                {/* Stats Grid */}
+                <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.section}>
+                    <Text style={styles.sectionTitle}>Statistik</Text>
+                    <View style={styles.statsGrid}>
+                        {stats.map((stat, index) => (
+                            <Animated.View
+                                key={index}
+                                entering={FadeInUp.delay(index * 80).duration(400)}
+                                style={styles.statCard}
+                            >
+                                <View style={[styles.statIconContainer, { backgroundColor: stat.bgColor }]}>
+                                    <Ionicons name={stat.icon} size={20} color={stat.color} />
+                                </View>
+                                <Text style={styles.statValue}>{stat.value}</Text>
+                                <Text style={styles.statTitle}>{stat.title}</Text>
+                                <View style={[
+                                    styles.statTrend,
+                                    { backgroundColor: stat.trend.startsWith('+') ? '#ecfdf5' : '#fef2f2' }
+                                ]}>
+                                    <Ionicons
+                                        name={stat.trend.startsWith('+') ? 'trending-up' : 'trending-down'}
+                                        size={10}
+                                        color={stat.trend.startsWith('+') ? '#10b981' : '#ef4444'}
+                                    />
+                                    <Text style={[
+                                        styles.statTrendText,
+                                        { color: stat.trend.startsWith('+') ? '#10b981' : '#ef4444' }
+                                    ]}>{stat.trend}</Text>
+                                </View>
+                            </Animated.View>
+                        ))}
+                    </View>
+                </Animated.View>
+
+                {/* Quick Actions */}
+                <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.section}>
+                    <Text style={styles.sectionTitle}>Aksi Cepat</Text>
+                    <View style={styles.actionsRow}>
+                        {quickActions.map((action, index) => (
+                            <Animated.View
+                                key={action.id}
+                                entering={FadeInRight.delay(index * 100).duration(400)}
+                                style={styles.actionWrapper}
+                            >
+                                <TouchableOpacity style={styles.actionButton} activeOpacity={0.8}>
+                                    <LinearGradient
+                                        colors={action.gradient}
+                                        style={styles.actionGradient}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                    >
+                                        <Ionicons name={action.icon} size={24} color="#ffffff" />
+                                    </LinearGradient>
+                                    <Text style={styles.actionTitle}>{action.title}</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        ))}
+                    </View>
+                </Animated.View>
+
+                {/* Animal List */}
+                <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Daftar Hewan</Text>
+                        <TouchableOpacity>
+                            <Text style={styles.seeAll}>Lihat Semua</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Filter Pills */}
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.filterScroll}
+                        contentContainerStyle={styles.filterContainer}
+                    >
+                        {filters.map((filter) => (
+                            <TouchableOpacity
+                                key={filter.id}
+                                style={[
+                                    styles.filterPill,
+                                    selectedFilter === filter.id && styles.filterPillActive
+                                ]}
+                                onPress={() => setSelectedFilter(filter.id)}
+                            >
+                                <Text style={[
+                                    styles.filterText,
+                                    selectedFilter === filter.id && styles.filterTextActive
+                                ]}>{filter.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    {/* Animal Cards */}
+                    <View style={styles.animalList}>
+                        {animals.map((animal, index) => (
+                            <AnimalCard key={animal.id} animal={animal} index={index} />
+                        ))}
+                    </View>
+                </Animated.View>
+
+                <View style={{ height: 100 }} />
+            </ScrollView>
+        </View>
     );
+};
 
-    const renderAnimalCard = ({ item, index }) => {
-        const animalType = ANIMAL_TYPES[item.type] || ANIMAL_TYPES.OTHER;
+const AnimalCard = ({ animal, index }) => {
+    const animalType = ANIMAL_TYPES[animal.type] || ANIMAL_TYPES.OTHER;
+    const isHealthy = animal.status === 'Sehat';
 
-        return (
-            <Animated.View entering={FadeInDown.delay(index * 100 + 400).duration(500)}>
-                <TouchableOpacity
-                    activeOpacity={0.9}
-                    onPress={() => { }} // Navigate to detail
-                >
-                    <Card style={styles.animalCard}>
+    return (
+        <Animated.View entering={FadeInUp.delay(index * 100).duration(400)}>
+            <TouchableOpacity activeOpacity={0.9} onPress={() => { }}>
+                <View style={styles.animalCard}>
+                    <View style={styles.animalLeft}>
                         <View style={styles.animalImageContainer}>
                             <Text style={styles.animalEmoji}>{animalType.icon}</Text>
                             <View style={[
+                                styles.statusDot,
+                                { backgroundColor: isHealthy ? '#10b981' : '#ef4444' }
+                            ]} />
+                        </View>
+                    </View>
+                    <View style={styles.animalContent}>
+                        <View style={styles.animalHeader}>
+                            <Text style={styles.animalName}>{animal.name}</Text>
+                            <View style={[
                                 styles.statusBadge,
-                                { backgroundColor: item.status === 'Sehat' ? COLORS.success : COLORS.error }
+                                { backgroundColor: isHealthy ? '#ecfdf5' : '#fef2f2' }
                             ]}>
-                                <Text style={styles.statusText}>{item.status}</Text>
+                                <Text style={[
+                                    styles.statusText,
+                                    { color: isHealthy ? '#059669' : '#dc2626' }
+                                ]}>{animal.status}</Text>
                             </View>
                         </View>
-                        <View style={styles.animalInfo}>
-                            <View>
-                                <Text style={styles.animalName}>{item.name}</Text>
-                                <Text style={styles.animalType}>{animalType.label}</Text>
+                        <Text style={styles.animalType}>{animalType.label}</Text>
+                        <View style={styles.animalMeta}>
+                            <View style={styles.metaItem}>
+                                <Ionicons name="calendar-outline" size={12} color="#9ca3af" />
+                                <Text style={styles.metaText}>{animal.age}</Text>
                             </View>
-                            <View style={styles.animalDetails}>
-                                <View style={styles.detailItem}>
-                                    <Ionicons name="calendar-outline" size={14} color={COLORS.textLight} />
-                                    <Text style={styles.detailText}>{item.age}</Text>
-                                </View>
-                                <View style={styles.detailItem}>
-                                    <Ionicons name="scale-outline" size={14} color={COLORS.textLight} />
-                                    <Text style={styles.detailText}>{item.weight}</Text>
-                                </View>
+                            <View style={styles.metaDot} />
+                            <View style={styles.metaItem}>
+                                <Ionicons name="scale-outline" size={12} color="#9ca3af" />
+                                <Text style={styles.metaText}>{animal.weight}</Text>
+                            </View>
+                            <View style={styles.metaDot} />
+                            <View style={styles.metaItem}>
+                                <Ionicons name="time-outline" size={12} color="#9ca3af" />
+                                <Text style={styles.metaText}>{animal.lastCheck}</Text>
                             </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={24} color={COLORS.gray} />
-                    </Card>
-                </TouchableOpacity>
-            </Animated.View>
-        );
-    };
-
-    return (
-        <View style={styles.container}>
-            <Header
-                title="Manajemen Ternak"
-                subtitle="Pantau kondisi hewan ternakmu"
-                rightIcon={<Ionicons name="add" size={24} color={COLORS.text} />}
-                onRightPress={() => { }} // Navigate to Add Animal
-                showBack={false}
-            />
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                {/* Stats Grid */}
-                <View style={styles.statsGrid}>
-                    {stats.map((stat, index) => renderStatCard(stat, index))}
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
                 </View>
-
-                {/* Quick Actions */}
-                <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.section}>
-                    <Text style={styles.sectionTitle}>Aksi Cepat</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionScroll}>
-                        <Button
-                            title="Catat Kesehatan"
-                            icon={<Ionicons name="medical" size={18} color={COLORS.white} />}
-                            size="small"
-                            style={{ marginRight: 12 }}
-                            onPress={() => { }}
-                        />
-                        <Button
-                            title="Jadwal Pakan"
-                            icon={<Ionicons name="time" size={18} color={COLORS.white} />}
-                            size="small"
-                            variant="secondary"
-                            style={{ marginRight: 12 }}
-                            onPress={() => { }}
-                        />
-                        <Button
-                            title="Panen"
-                            icon={<Ionicons name="basket" size={18} color={COLORS.white} />}
-                            size="small"
-                            variant="primary" // Changed to primary to utilize accent color logic if needed or just differ
-                            style={{ backgroundColor: COLORS.success }}
-                            onPress={() => { }}
-                        />
-                    </ScrollView>
-                </Animated.View>
-
-                {/* Animal List Header */}
-                <View style={styles.listHeader}>
-                    <Text style={styles.sectionTitle}>Daftar Hewan</Text>
-                    <TouchableOpacity>
-                        <Text style={styles.seeAll}>Lihat Semua</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Animal List */}
-                <View style={styles.animalList}>
-                    {animals.map((item, index) => renderAnimalCard({ item, index }))}
-                </View>
-
-            </ScrollView>
-        </View>
+            </TouchableOpacity>
+        </Animated.View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: '#ffffff',
     },
     scrollContent: {
-        padding: SIZES.padding,
         paddingBottom: 40,
+    },
+    header: {
+        paddingHorizontal: SIZES.padding,
+        paddingTop: 8,
+        paddingBottom: 16,
+    },
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    headerLeft: {},
+    headerSubtitle: {
+        fontSize: 14,
+        color: '#6b7280',
+        marginBottom: 2,
+    },
+    headerTitle: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#111827',
+        letterSpacing: -0.5,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    iconButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#faf8f5',
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...SHADOWS.small,
+    },
+    summarySection: {
+        paddingHorizontal: SIZES.padding,
+        marginBottom: 24,
+    },
+    summaryCard: {
+        borderRadius: 24,
+        padding: 24,
+        overflow: 'hidden',
+        ...SHADOWS.large,
+    },
+    summaryDecor1: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        top: -40,
+        right: -20,
+    },
+    summaryDecor2: {
+        position: 'absolute',
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        bottom: -20,
+        left: 20,
+    },
+    summaryContent: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    summaryLeft: {},
+    summaryLabel: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.8)',
+        marginBottom: 4,
+    },
+    summaryValue: {
+        fontSize: 48,
+        fontWeight: '800',
+        color: '#ffffff',
+        marginBottom: 8,
+    },
+    trendBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        alignSelf: 'flex-start',
+    },
+    trendText: {
+        fontSize: 12,
+        color: '#ffffff',
+        fontWeight: '500',
+    },
+    summaryIcon: {
+        width: 80,
+        height: 80,
+        borderRadius: 24,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    summaryEmoji: {
+        fontSize: 48,
+    },
+    section: {
+        paddingHorizontal: SIZES.padding,
+        marginBottom: 24,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 16,
+    },
+    seeAll: {
+        color: '#964b00',
+        fontWeight: '600',
+        fontSize: 14,
     },
     statsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        marginBottom: 24,
-    },
-    statWrapper: {
-        marginBottom: 16,
+        gap: 12,
     },
     statCard: {
-        alignItems: 'center',
+        width: (width - SIZES.padding * 2 - 12) / 2,
+        backgroundColor: '#ffffff',
+        borderRadius: 20,
         padding: 16,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
+        ...SHADOWS.small,
     },
-    statIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+    statIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
     },
     statValue: {
-        fontSize: SIZES.h2,
-        fontWeight: '700',
-        color: COLORS.text,
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#111827',
+        marginBottom: 4,
     },
     statTitle: {
-        fontSize: SIZES.caption,
-        color: COLORS.textLight,
+        fontSize: 12,
+        color: '#6b7280',
+        marginBottom: 8,
     },
-    section: {
-        marginBottom: 24,
-    },
-    sectionTitle: {
-        fontSize: SIZES.h4,
-        fontWeight: '700',
-        color: COLORS.text,
-        marginBottom: 16,
-    },
-    actionScroll: {
-        paddingRight: 20,
-    },
-    listHeader: {
+    statTrend: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        gap: 2,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
     },
-    seeAll: {
-        color: COLORS.primary,
+    statTrendText: {
+        fontSize: 10,
         fontWeight: '600',
-        fontSize: SIZES.bodySmall,
+    },
+    actionsRow: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    actionWrapper: {
+        flex: 1,
+    },
+    actionButton: {
+        alignItems: 'center',
+        gap: 10,
+    },
+    actionGradient: {
+        width: '100%',
+        paddingVertical: 18,
+        borderRadius: 18,
+        alignItems: 'center',
+        ...SHADOWS.small,
+    },
+    actionTitle: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#374151',
+    },
+    filterScroll: {
+        marginBottom: 16,
+        marginLeft: -SIZES.padding,
+        marginRight: -SIZES.padding,
+        marginTop: -8,
+    },
+    filterContainer: {
+        paddingHorizontal: SIZES.padding,
+        gap: 8,
+    },
+    filterPill: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#faf8f5',
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
+    },
+    filterPillActive: {
+        backgroundColor: '#964b00',
+        borderColor: '#964b00',
+    },
+    filterText: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#6b7280',
+    },
+    filterTextActive: {
+        color: '#ffffff',
     },
     animalList: {
         gap: 12,
     },
     animalCard: {
+        backgroundColor: '#ffffff',
+        borderRadius: 20,
+        padding: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 12,
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
+        ...SHADOWS.small,
+    },
+    animalLeft: {
+        marginRight: 14,
     },
     animalImageContainer: {
-        width: 60,
-        height: 60,
-        borderRadius: SIZES.radius,
-        backgroundColor: COLORS.lightGray,
+        width: 56,
+        height: 56,
+        borderRadius: 16,
+        backgroundColor: '#faf8f5',
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
         position: 'relative',
     },
     animalEmoji: {
-        fontSize: 32,
+        fontSize: 28,
+    },
+    statusDot: {
+        position: 'absolute',
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        bottom: -2,
+        right: -2,
+        borderWidth: 2,
+        borderColor: '#ffffff',
+    },
+    animalContent: {
+        flex: 1,
+    },
+    animalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 2,
+    },
+    animalName: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#111827',
     },
     statusBadge: {
-        position: 'absolute',
-        bottom: -6,
-        paddingHorizontal: 6,
+        paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 8,
     },
     statusText: {
-        color: COLORS.white,
-        fontSize: 8,
-        fontWeight: '700',
-    },
-    animalInfo: {
-        flex: 1,
-    },
-    animalName: {
-        fontSize: SIZES.body,
-        fontWeight: '700',
-        color: COLORS.text,
-        marginBottom: 2,
+        fontSize: 10,
+        fontWeight: '600',
     },
     animalType: {
-        fontSize: SIZES.caption,
-        color: COLORS.textLight,
+        fontSize: 13,
+        color: '#6b7280',
         marginBottom: 6,
     },
-    animalDetails: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    detailItem: {
+    animalMeta: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
     },
-    detailText: {
-        fontSize: SIZES.caption,
-        color: COLORS.textMuted,
+    metaItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 3,
+    },
+    metaText: {
+        fontSize: 11,
+        color: '#9ca3af',
+    },
+    metaDot: {
+        width: 3,
+        height: 3,
+        borderRadius: 1.5,
+        backgroundColor: '#d1d5db',
+        marginHorizontal: 6,
     },
 });
 
