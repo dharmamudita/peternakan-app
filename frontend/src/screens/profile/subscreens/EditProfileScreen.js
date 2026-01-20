@@ -5,11 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, SIZES, SHADOWS } from '../../../constants/theme';
 import { useAuth } from '../../../context/AuthContext';
-import { authApi, uploadApi } from '../../../services/api';
+import { uploadApi } from '../../../services/api';
 
 const EditProfileScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const [name, setName] = useState(user?.displayName || '');
     const [email, setEmail] = useState(user?.email || '');
     const [loading, setLoading] = useState(false);
@@ -81,20 +81,23 @@ const EditProfileScreen = ({ navigation }) => {
                 photoURL = uploadRes.url || uploadRes.data?.url || (uploadRes.file ? uploadRes.file.url : photoURL);
             }
 
-            // 2. Update Profile
+            // 2. Update Profile via Context (ini penting agar UI ProfileScreen terupdate)
             const updateData = {
                 displayName: name,
                 photoURL: photoURL
             };
 
-            console.log('Updating profile with', updateData);
+            console.log('Updating profile context with', updateData);
 
-            await authApi.updateProfile(updateData);
+            const result = await updateUser(updateData);
 
-            // 3. Success
-            Alert.alert('Sukses', 'Profil berhasil diperbarui.', [
-                { text: 'OK', onPress: () => navigation.goBack() }
-            ]);
+            if (result.success) {
+                Alert.alert('Sukses', 'Profil berhasil diperbarui.', [
+                    { text: 'OK', onPress: () => navigation.goBack() }
+                ]);
+            } else {
+                throw new Error(result.error || 'Gagal update profil');
+            }
 
         } catch (error) {
             console.error('Update profile error:', error);
