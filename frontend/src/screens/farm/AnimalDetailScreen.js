@@ -19,7 +19,9 @@ const AnimalDetailScreen = ({ navigation, route }) => {
     const [loading, setLoading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [newRecord, setNewRecord] = useState({
-        recordType: 'checkup', diagnosis: '', treatment: '', notes: '', cost: '', nextVisitDate: '', healthStatus: 'healthy'
+        recordType: 'checkup', diagnosis: '', treatment: '', notes: '', cost: '', nextVisitDate: '',
+        healthStatus: 'healthy',
+        recordDate: new Date().toISOString().split('T')[0]
     });
 
     useEffect(() => {
@@ -50,10 +52,14 @@ const AnimalDetailScreen = ({ navigation, route }) => {
             await animalApi.addHealthRecord(animal.id, {
                 ...newRecord,
                 cost: parseFloat(newRecord.cost) || 0,
-                date: new Date(),
+                date: newRecord.recordDate ? new Date(newRecord.recordDate) : new Date(),
             });
             setModalVisible(false);
-            setNewRecord({ recordType: 'checkup', diagnosis: '', treatment: '', notes: '', cost: '', nextVisitDate: '', healthStatus: animal.healthStatus });
+            setNewRecord({
+                recordType: 'checkup', diagnosis: '', treatment: '', notes: '', cost: '', nextVisitDate: '',
+                healthStatus: animal.healthStatus,
+                recordDate: new Date().toISOString().split('T')[0]
+            });
             loadData();
             Alert.alert('Sukses', 'Catatan kesehatan ditambahkan');
         } catch (error) {
@@ -263,6 +269,16 @@ const AnimalDetailScreen = ({ navigation, route }) => {
                             <TouchableOpacity onPress={() => setModalVisible(false)}>
                                 <Ionicons name="close" size={24} color="#6b7280" />
                             </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.formGroup}>
+                            <Text style={styles.formLabel}>Tanggal Pemeriksaan</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="YYYY-MM-DD"
+                                value={newRecord.recordDate}
+                                onChangeText={(text) => setNewRecord({ ...newRecord, recordDate: text })}
+                            />
                         </View>
 
                         <View style={styles.formGroup}>
