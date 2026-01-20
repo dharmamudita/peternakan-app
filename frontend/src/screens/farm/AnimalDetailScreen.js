@@ -88,32 +88,58 @@ const AnimalDetailScreen = ({ navigation, route }) => {
     };
 
     const handleDeathReport = () => {
-        Alert.alert(
-            'Laporkan Kematian',
-            'Apakah hewan ini mati? Status akan diubah menjadi mati dan populasi aktif berkurang.',
-            [
-                { text: 'Batal', style: 'cancel' },
-                {
-                    text: 'Ya, Laporkan',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            setLoading(true);
-                            await animalApi.update(animal.id, {
-                                isActive: false,
-                                deathDate: new Date(),
-                                healthStatus: 'dead'
-                            });
-                            Alert.alert('Tercatat', 'Hewan telah dilaporkan mati.');
-                            navigation.goBack();
-                        } catch (error) {
-                            Alert.alert('Gagal', error.message);
-                            setLoading(false);
-                        }
-                    }
-                }
-            ]
-        );
+        const confirmMessage = 'Laporkan Kematian\n\nApakah hewan ini mati? Status akan diubah menjadi mati dan populasi aktif berkurang.';
+
+        if (Platform.OS === 'web') {
+            if (window.confirm(confirmMessage)) {
+                processDeathReport();
+            }
+        } else {
+            Alert.alert(
+                'Laporkan Kematian',
+                'Apakah hewan ini mati? Status akan diubah menjadi mati dan populasi aktif berkurang.',
+                [
+                    { text: 'Batal', style: 'cancel' },
+                    { text: 'Ya, Laporkan', style: 'destructive', onPress: processDeathReport }
+                ]
+            );
+        }
+    };
+
+    const processDeathReport = async () => {
+        try {
+            setLoading(true);
+            await animalApi.update(animal.id, {
+                isActive: false,
+                deathDate: new Date(),
+                healthStatus: 'dead'
+            });
+
+            if (Platform.OS === 'web') {
+                alert('Tercatat: Hewan telah dilaporkan mati.');
+            } else {
+                Alert.alert('Tercatat', 'Hewan telah dilaporkan mati.');
+            }
+            navigation.goBack();
+        } catch (error) {
+            const userId = animal.userId || 'unknown'; // Debugging
+            console.error('Death report error:', error);
+            if (Platform.OS === 'web') {
+                alert(`Gagal: ${error.message}`);
+            } else {
+                Alert.alert('Gagal', error.message);
+            }
+            setLoading(false);
+        }
+    };
+
+    const handleEdit = () => {
+        // Implementasi Edit Nanti (misal buka Modal Edit)
+        if (Platform.OS === 'web') {
+            alert('Fitur Edit akan segera hadir!');
+        } else {
+            Alert.alert('Info', 'Fitur Edit akan segera hadir!');
+        }
     };
 
     return (
@@ -128,7 +154,7 @@ const AnimalDetailScreen = ({ navigation, route }) => {
                     <TouchableOpacity style={styles.editButton} onPress={handleDeathReport}>
                         <Ionicons name="skull-outline" size={24} color="#dc2626" />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.editButton}>
+                    <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
                         <Ionicons name="create-outline" size={24} color="#964b00" />
                     </TouchableOpacity>
                 </View>

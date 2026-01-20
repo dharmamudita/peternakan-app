@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions,
     RefreshControl, ActivityIndicator, Alert, Platform, Modal, TextInput
@@ -56,12 +57,16 @@ const FarmDashboardScreen = ({ navigation }) => {
                 animalApi.getStats(),
             ]);
             setAnimals(animalsRes?.data || animalsRes || []);
-            if (statsRes) {
+
+            const statsData = statsRes?.data || statsRes || {};
+            console.log('Stats Data:', statsData); // Debugging
+
+            if (statsData) {
                 setStats({
-                    total: statsRes.total || 0,
-                    healthy: statsRes.byHealthStatus?.healthy || 0,
-                    sick: statsRes.byHealthStatus?.sick || 0,
-                    pregnant: statsRes.byHealthStatus?.pregnant || 0,
+                    total: statsData.total || 0,
+                    healthy: statsData.byHealthStatus?.healthy || 0,
+                    sick: statsData.byHealthStatus?.sick || 0,
+                    pregnant: statsData.byHealthStatus?.pregnant || 0,
                 });
             }
         } catch (error) {
@@ -72,7 +77,11 @@ const FarmDashboardScreen = ({ navigation }) => {
         }
     }, []);
 
-    useEffect(() => { loadData(); }, [loadData]);
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [loadData])
+    );
 
     const onRefresh = () => {
         setRefreshing(true);
