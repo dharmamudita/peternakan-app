@@ -247,7 +247,7 @@ const HomeScreen = ({ navigation }) => {
                                 entering={FadeInRight.delay(index * 100).duration(400)}
                                 style={styles.actionWrapper}
                             >
-                                <TouchableOpacity style={styles.actionCard} activeOpacity={0.9}>
+                                <TouchableOpacity style={styles.actionCard} activeOpacity={0.9} onPress={action.onPress}>
                                     <View style={[styles.actionIcon, { backgroundColor: action.color + '15' }]}>
                                         <Ionicons name={action.icon} size={22} color={action.color} />
                                     </View>
