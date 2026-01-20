@@ -101,7 +101,7 @@ const HomeScreen = ({ navigation }) => {
             subtitle: 'Kelola hewan',
             icon: 'paw',
             gradient: ['#964b00', '#7c3f06'],
-            onPress: () => navigation.navigate('PeternakanTab'),
+            onPress: () => navigation.navigate('FarmTab'),
         },
         {
             id: 2,
@@ -117,7 +117,7 @@ const HomeScreen = ({ navigation }) => {
             subtitle: 'Belajar',
             icon: 'school',
             gradient: ['#b87333', '#964b00'],
-            onPress: () => navigation.navigate('EdukasiTab'),
+            onPress: () => navigation.navigate('EducationTab'),
         },
         {
             id: 4,
@@ -130,8 +130,20 @@ const HomeScreen = ({ navigation }) => {
     ];
 
     const quickActions = [
-        { id: 1, title: 'Tambah Hewan', icon: 'add-circle', color: '#964b00' },
-        { id: 2, title: 'Catat Kesehatan', icon: 'medical', color: '#7c3f06' },
+        {
+            id: 1,
+            title: 'Tambah Hewan',
+            icon: 'add-circle',
+            color: '#964b00',
+            onPress: () => navigation.navigate('FarmTab', { action: 'add_animal' })
+        },
+        {
+            id: 2,
+            title: 'Catat Kesehatan',
+            icon: 'medical',
+            color: '#7c3f06',
+            onPress: () => navigation.navigate('FarmTab')
+        },
     ];
 
     const activities = [

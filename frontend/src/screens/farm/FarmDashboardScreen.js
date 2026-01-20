@@ -20,7 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
-const FarmDashboardScreen = ({ navigation }) => {
+const FarmDashboardScreen = ({ navigation, route }) => {
     const insets = useSafeAreaInsets();
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
@@ -80,7 +80,14 @@ const FarmDashboardScreen = ({ navigation }) => {
     useFocusEffect(
         useCallback(() => {
             loadData();
-        }, [loadData])
+
+            // Check for Quick Actions from Home Screen
+            if (route.params?.action === 'add_animal') {
+                setModalVisible(true);
+                // Clear param after use
+                navigation.setParams({ action: null });
+            }
+        }, [loadData, route.params])
     );
 
     const onRefresh = () => {
