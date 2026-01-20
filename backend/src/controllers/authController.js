@@ -246,6 +246,26 @@ const forgotPassword = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Change Password
+ * POST /api/auth/change-password
+ */
+const changePassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+        return badRequest(res, 'Password lama dan baru wajib diisi');
+    }
+
+    if (newPassword.length < 6) {
+        return badRequest(res, 'Password baru minimal 6 karakter');
+    }
+
+    await AuthService.changePassword(req.user.uid, req.user.email, oldPassword, newPassword);
+
+    return success(res, null, 'Password berhasil diubah');
+});
+
+/**
  * Request Seller OTP
  * POST /api/auth/seller/request-otp
  */
@@ -279,6 +299,7 @@ module.exports = {
     googleAuth,
     facebookAuth,
     forgotPassword,
+    changePassword,
     requestSellerOtp,
     verifySellerOtp,
     getProfile,

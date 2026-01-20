@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../../../constants/theme';
+import { authApi } from '../../../services/api';
 
 const ChangePasswordScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
@@ -18,25 +19,48 @@ const ChangePasswordScreen = ({ navigation }) => {
 
     const handleChange = async () => {
         if (!currentPassword || !newPassword || !confirmPassword) {
-            Alert.alert('Error', 'Mohon isi semua kolom');
+            if (Platform.OS === 'web') window.alert('Mohon isi semua kolom');
+            else Alert.alert('Error', 'Mohon isi semua kolom');
             return;
         }
         if (newPassword !== confirmPassword) {
-            Alert.alert('Error', 'Konfirmasi password tidak cocok');
+            if (Platform.OS === 'web') window.alert('Konfirmasi password tidak cocok');
+            else Alert.alert('Error', 'Konfirmasi password tidak cocok');
             return;
         }
         if (newPassword.length < 6) {
-            Alert.alert('Error', 'Password baru minimal 6 karakter');
+            if (Platform.OS === 'web') window.alert('Password baru minimal 6 karakter');
+            else Alert.alert('Error', 'Password baru minimal 6 karakter');
             return;
         }
 
         setLoading(true);
-        // Simulasi change password (tahap selanjutnya integrasi API auth)
-        setTimeout(() => {
+        try {
+            const response = await authApi.changePassword(currentPassword, newPassword);
+
+            if (response.success) {
+                if (Platform.OS === 'web') {
+                    window.alert('✅ Password berhasil diubah');
+                    navigation.goBack();
+                } else {
+                    Alert.alert('Sukses', 'Password berhasil diubah', [
+                        { text: 'OK', onPress: () => navigation.goBack() }
+                    ]);
+                }
+            } else {
+                throw new Error(response.message || 'Gagal mengubah password');
+            }
+        } catch (error) {
+            console.error('Change password error:', error);
+            const msg = error.response?.data?.message || error.message || 'Terjadi kesalahan saat mengubah password';
+            if (Platform.OS === 'web') {
+                window.alert(`❌ ${msg}`);
+            } else {
+                Alert.alert('Gagal', msg);
+            }
+        } finally {
             setLoading(false);
-            Alert.alert('Sukses', 'Password berhasil diubah');
-            navigation.goBack();
-        }, 1500);
+        }
     };
 
     const renderInput = (label, value, onChange, fieldKey, placeholder) => (

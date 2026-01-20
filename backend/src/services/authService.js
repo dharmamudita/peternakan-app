@@ -485,6 +485,66 @@ class AuthService {
     }
 
     /**
+     * Ganti Password
+     */
+    static async changePassword(uid, email, oldPassword, newPassword) {
+        try {
+            if (!oldPassword || !newPassword) {
+                throw new Error('Password lama dan baru wajib diisi');
+            }
+
+            if (newPassword.length < 6) {
+                throw new Error('Password baru minimal 6 karakter');
+            }
+
+            // 1. Validasi Password Lama dengan mencoba login
+            console.log('[ChangePassword] Verifying old password for email:', email);
+            const apiKey = process.env.FIREBASE_WEB_API_KEY;
+
+            if (!apiKey) {
+                throw new Error('Konfigurasi server belum lengkap (API Key missing)');
+            }
+
+            const verifyResponse = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: email,
+                    password: oldPassword,
+                    returnSecureToken: false
+                })
+            });
+
+            const verifyData = await verifyResponse.json();
+
+            if (!verifyResponse.ok) {
+                const msg = verifyData.error?.message || '';
+                console.error('[ChangePassword] Verify failed:', msg);
+                if (msg.includes('INVALID_PASSWORD') || msg.includes('INVALID_LOGIN_CREDENTIALS')) {
+                    throw new Error('Password lama salah');
+                }
+                throw new Error('Gagal memverifikasi password lama');
+            }
+
+            const verifiedUid = verifyData.localId;
+            console.log(`[ChangePassword] Verified UID: ${verifiedUid}`);
+            console.log(`[ChangePassword] Target UID from request: ${uid}`);
+
+            // 2. Update Password di Firebase Auth using VERIFIED UID
+            // Use verifiedUid to be absolutely sure we update the correct Auth account
+            await auth.updateUser(verifiedUid, {
+                password: newPassword
+            });
+            console.log('[ChangePassword] Password updated successfully for UID:', verifiedUid);
+
+            return true;
+        } catch (error) {
+            console.error('Change Password Error:', error.message);
+            throw error;
+        }
+    }
+
+    /**
      * Update profil user
      */
     static async updateProfile(uid, updateData) {

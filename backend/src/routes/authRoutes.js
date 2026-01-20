@@ -18,6 +18,7 @@ router.post('/forgot-password', authController.forgotPassword);
 // Protected routes
 router.get('/me', authenticate, authController.getProfile);
 router.put('/me', authenticate, authController.updateProfile);
+router.post('/change-password', authenticate, authController.changePassword);
 router.post('/seller/request-otp', authenticate, authController.requestSellerOtp);
 router.post('/seller/verify-otp', authenticate, authController.verifySellerOtp);
 

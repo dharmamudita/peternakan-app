@@ -76,6 +76,7 @@ export const authApi = {
     verifySellerOtp: (otp) => api.post('/auth/seller/verify-otp', { otp }),
     getProfile: () => api.get('/auth/me'),
     updateProfile: (data) => api.put('/auth/me', data),
+    changePassword: (oldPassword, newPassword) => api.post('/auth/change-password', { oldPassword, newPassword }),
     exchangeCustomToken: async (customToken) => {
         try {
             const response = await axios.post(
