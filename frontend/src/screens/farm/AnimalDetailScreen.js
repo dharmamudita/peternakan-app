@@ -248,9 +248,14 @@ const AnimalDetailScreen = ({ navigation, route }) => {
                                         <View style={styles.timelineDot} />
                                     </View>
                                     <View style={styles.timelineContent}>
-                                        <Text style={styles.recordDate}>{formatDate(record.createdAt)}</Text>
+                                        <Text style={styles.recordDate}>{formatDate(record.recordDate || record.createdAt)}</Text>
                                         <Text style={styles.recordTitle}>{record.diagnosis}</Text>
                                         <Text style={styles.recordDesc}>{record.treatment}</Text>
+                                        {record.cost > 0 && (
+                                            <Text style={{ fontSize: 13, color: '#dc2626', fontWeight: '600', marginTop: 4 }}>
+                                                Biaya: Rp {Number(record.cost).toLocaleString('id-ID')}
+                                            </Text>
+                                        )}
                                         {record.notes && <Text style={styles.recordNotes}>"{record.notes}"</Text>}
                                     </View>
                                 </View>
