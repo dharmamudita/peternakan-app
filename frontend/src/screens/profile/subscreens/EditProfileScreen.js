@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, Image, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { COLORS, SIZES, SHADOWS } from '../../../constants/theme';
 import { useAuth } from '../../../context/AuthContext';
-// import { userApi } from '../../../services/api'; // Pastikan ada API update user
+import { authApi, uploadApi } from '../../../services/api';
 
 const EditProfileScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
@@ -12,6 +13,35 @@ const EditProfileScreen = ({ navigation }) => {
     const [name, setName] = useState(user?.displayName || '');
     const [email, setEmail] = useState(user?.email || '');
     const [loading, setLoading] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
+
+    useEffect(() => {
+        (async () => {
+            if (Platform.OS !== 'web') {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert('Izin Diperlukan', 'Mohon izinkan akses galeri untuk mengganti foto profil.');
+                }
+            }
+        })();
+    }, []);
+
+    const handlePickImage = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.5,
+            });
+
+            if (!result.canceled && result.assets[0].uri) {
+                setSelectedImage(result.assets[0].uri);
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Gagal memilih gambar');
+        }
+    };
 
     const handleSave = async () => {
         if (!name.trim()) {
@@ -19,13 +49,59 @@ const EditProfileScreen = ({ navigation }) => {
             return;
         }
 
-        // Logika update nanti di sini
         setLoading(true);
-        setTimeout(() => {
+        try {
+            let photoURL = user?.photoURL;
+
+            // 1. Upload Foto jika ada
+            if (selectedImage) {
+                const formData = new FormData();
+                const uri = selectedImage;
+                const filename = uri.split('/').pop() || `profile_${Date.now()}.jpg`;
+
+                let type = 'image/jpeg';
+                if (filename.toLowerCase().endsWith('.png')) type = 'image/png';
+                else if (filename.toLowerCase().endsWith('.jpg') || filename.toLowerCase().endsWith('.jpeg')) type = 'image/jpeg';
+
+                if (Platform.OS === 'web') {
+                    const response = await fetch(uri);
+                    const blob = await response.blob();
+                    formData.append('image', blob, filename);
+                } else {
+                    formData.append('image', {
+                        uri,
+                        name: filename,
+                        type,
+                    });
+                }
+
+                const uploadRes = await uploadApi.uploadImage(formData);
+                console.log('Upload success:', uploadRes);
+                // Adjust based on backend response. Usually { url: '...' } or { data: { url: ... } }
+                photoURL = uploadRes.url || uploadRes.data?.url || (uploadRes.file ? uploadRes.file.url : photoURL);
+            }
+
+            // 2. Update Profile
+            const updateData = {
+                displayName: name,
+                photoURL: photoURL
+            };
+
+            console.log('Updating profile with', updateData);
+
+            await authApi.updateProfile(updateData);
+
+            // 3. Success
+            Alert.alert('Sukses', 'Profil berhasil diperbarui.', [
+                { text: 'OK', onPress: () => navigation.goBack() }
+            ]);
+
+        } catch (error) {
+            console.error('Update profile error:', error);
+            Alert.alert('Gagal', error.message || 'Terjadi kesalahan');
+        } finally {
             setLoading(false);
-            Alert.alert('Sukses', 'Profil berhasil diperbarui (Simulasi)');
-            navigation.goBack();
-        }, 1500);
+        }
     };
 
     return (
@@ -40,16 +116,18 @@ const EditProfileScreen = ({ navigation }) => {
 
             <View style={styles.content}>
                 <View style={styles.avatarSection}>
-                    <View style={styles.avatarContainer}>
-                        {user?.photoURL ? (
+                    <TouchableOpacity onPress={handlePickImage} style={styles.avatarContainer}>
+                        {selectedImage ? (
+                            <Image source={{ uri: selectedImage }} style={styles.avatar} />
+                        ) : user?.photoURL ? (
                             <Image source={{ uri: user.photoURL }} style={styles.avatar} />
                         ) : (
                             <Text style={styles.avatarText}>{name.charAt(0)?.toUpperCase() || 'U'}</Text>
                         )}
-                        <TouchableOpacity style={styles.cameraIcon}>
+                        <View style={styles.cameraIcon}>
                             <Ionicons name="camera" size={16} color="white" />
-                        </TouchableOpacity>
-                    </View>
+                        </View>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.form}>
