@@ -63,25 +63,34 @@ const EditProfileScreen = ({ navigation }) => {
                 if (filename.toLowerCase().endsWith('.png')) type = 'image/png';
                 else if (filename.toLowerCase().endsWith('.jpg') || filename.toLowerCase().endsWith('.jpeg')) type = 'image/jpeg';
 
+                // IMPORTANT: Backend expects field name 'file' (not 'image')
                 if (Platform.OS === 'web') {
                     const response = await fetch(uri);
                     const blob = await response.blob();
-                    formData.append('image', blob, filename);
+                    formData.append('file', blob, filename);
                 } else {
-                    formData.append('image', {
+                    formData.append('file', {
                         uri,
                         name: filename,
                         type,
                     });
                 }
 
+                console.log('Uploading image...');
                 const uploadRes = await uploadApi.uploadImage(formData);
-                console.log('Upload success:', uploadRes);
-                // Adjust based on backend response. Usually { url: '...' } or { data: { url: ... } }
-                photoURL = uploadRes.url || uploadRes.data?.url || (uploadRes.file ? uploadRes.file.url : photoURL);
+                console.log('Upload success response:', uploadRes);
+
+                // Parse response. uploadRes matches { success: true, data: { url: ... } }
+                if (uploadRes?.data?.url) {
+                    photoURL = uploadRes.data.url;
+                } else if (uploadRes?.url) {
+                    photoURL = uploadRes.url;
+                } else {
+                    console.warn('Could not find URL in upload response', uploadRes);
+                }
             }
 
-            // 2. Update Profile via Context (ini penting agar UI ProfileScreen terupdate)
+            // 2. Update Profile via Context
             const updateData = {
                 displayName: name,
                 photoURL: photoURL
@@ -101,7 +110,12 @@ const EditProfileScreen = ({ navigation }) => {
 
         } catch (error) {
             console.error('Update profile error:', error);
-            Alert.alert('Gagal', error.message || 'Terjadi kesalahan');
+            // Show more detailed error
+            let errorMessage = error.message;
+            if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            }
+            Alert.alert('Gagal', errorMessage || 'Terjadi kesalahan saat menyimpan');
         } finally {
             setLoading(false);
         }
