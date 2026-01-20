@@ -1,17 +1,9 @@
 /**
- * Onboarding Screen
- * Halaman pengenalan aplikasi dengan desain premium putih + coklat
+ * Onboarding Screen - Tanpa tumpukan, tampilan terintegrasi
  */
 
 import React, { useState, useRef } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    FlatList,
-    Dimensions,
-    TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, Dimensions, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -20,10 +12,9 @@ import Animated, {
     useAnimatedScrollHandler,
     interpolate,
     Extrapolate,
-    FadeInDown,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+import { SIZES, SHADOWS } from '../../constants/theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -31,29 +22,26 @@ const slides = [
     {
         id: '1',
         title: 'Kelola Peternakan',
-        description: 'Pantau kesehatan, jadwal pakan, dan perkembangan hewan ternak Anda dengan mudah dalam satu aplikasi.',
-        emoji: '🐄',
-        badge: 'Manajemen Ternak',
-        features: ['Mudah', 'Aman', 'Cepat'],
-        gradient: ['#964b00', '#7c3f06'],
+        description: 'Pantau kesehatan, jadwal pakan, dan perkembangan hewan ternak Anda dengan mudah.',
+        icon: 'paw',
+        color: '#964b00',
+        features: ['Pencatatan Lengkap', 'Jadwal Otomatis', 'Laporan Detail'],
     },
     {
         id: '2',
         title: 'Jual Beli Online',
-        description: 'Temukan dan jual berbagai produk peternakan dengan harga terbaik langsung dari peternak.',
-        emoji: '🛒',
-        badge: 'Marketplace',
-        features: ['Terpercaya', 'Murah', 'Lengkap'],
-        gradient: ['#7c3f06', '#5d3a1a'],
+        description: 'Temukan dan jual berbagai produk peternakan dengan harga terbaik.',
+        icon: 'cart',
+        color: '#7c3f06',
+        features: ['Marketplace Aman', 'Transaksi Mudah', 'Pengiriman Cepat'],
     },
     {
         id: '3',
         title: 'Belajar Beternak',
-        description: 'Akses ribuan kursus dan artikel dari pakar untuk meningkatkan skill beternak Anda.',
-        emoji: '📚',
-        badge: 'Edukasi',
-        features: ['Gratis', 'Berkualitas', 'Praktis'],
-        gradient: ['#b87333', '#964b00'],
+        description: 'Akses kursus dan artikel dari pakar untuk meningkatkan skill beternak.',
+        icon: 'school',
+        color: '#b87333',
+        features: ['Video Kursus', 'Artikel Gratis', 'Konsultasi Ahli'],
     },
 ];
 
@@ -96,14 +84,12 @@ const OnboardingScreen = ({ navigation }) => {
     };
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            {/* Skip Button */}
-            <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.skipContainer}>
-                <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-                    <Text style={styles.skipText}>Lewati</Text>
-                    <Ionicons name="arrow-forward" size={16} color="#964b00" />
-                </TouchableOpacity>
-            </Animated.View>
+        <View style={styles.container}>
+            {/* Background gradient yang terintegrasi */}
+            <LinearGradient
+                colors={['#ffffff', '#faf8f5', '#f5f0e8']}
+                style={styles.backgroundGradient}
+            />
 
             {/* Slides */}
             <Animated.FlatList
@@ -118,10 +104,19 @@ const OnboardingScreen = ({ navigation }) => {
                 scrollEventThrottle={16}
                 onViewableItemsChanged={onViewableItemsChanged}
                 viewabilityConfig={viewabilityConfig}
+                contentContainerStyle={{ paddingTop: insets.top + 80 }}
             />
 
+            {/* Skip Button - posisi lebih rendah */}
+            <View style={[styles.skipContainer, { top: insets.top + 16 }]}>
+                <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+                    <Text style={styles.skipText}>Lewati</Text>
+                    <Ionicons name="arrow-forward" size={14} color="#964b00" />
+                </TouchableOpacity>
+            </View>
+
             {/* Bottom Section */}
-            <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 24 }]}>
                 {/* Pagination */}
                 <View style={styles.pagination}>
                     {slides.map((_, index) => (
@@ -138,7 +133,7 @@ const OnboardingScreen = ({ navigation }) => {
                         end={{ x: 1, y: 0 }}
                     >
                         <Text style={styles.nextButtonText}>
-                            {currentIndex === slides.length - 1 ? 'Mulai' : 'Lanjut'}
+                            {currentIndex === slides.length - 1 ? 'Mulai Sekarang' : 'Lanjut'}
                         </Text>
                         <View style={styles.nextButtonIcon}>
                             <Ionicons name="arrow-forward" size={18} color="#964b00" />
@@ -162,44 +157,22 @@ const OnboardingSlide = ({ item, index, scrollX }) => {
     const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
 
     const animatedStyle = useAnimatedStyle(() => {
-        const scale = interpolate(
-            scrollX.value,
-            inputRange,
-            [0.8, 1, 0.8],
-            Extrapolate.CLAMP
-        );
-        const opacity = interpolate(
-            scrollX.value,
-            inputRange,
-            [0.5, 1, 0.5],
-            Extrapolate.CLAMP
-        );
-
+        const scale = interpolate(scrollX.value, inputRange, [0.9, 1, 0.9], Extrapolate.CLAMP);
+        const opacity = interpolate(scrollX.value, inputRange, [0.5, 1, 0.5], Extrapolate.CLAMP);
         return { transform: [{ scale }], opacity };
     });
 
     return (
         <View style={styles.slide}>
             <Animated.View style={[styles.slideContent, animatedStyle]}>
-                {/* Illustration Card */}
-                <View style={styles.illustrationContainer}>
-                    <LinearGradient
-                        colors={item.gradient}
-                        style={styles.illustrationGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    >
-                        <View style={styles.illustrationDecor1} />
-                        <View style={styles.illustrationDecor2} />
-                        <Text style={styles.emoji}>{item.emoji}</Text>
-                    </LinearGradient>
-                </View>
-
-                {/* Badge */}
-                <View style={styles.badgeContainer}>
-                    <View style={styles.badge}>
-                        <Ionicons name="leaf" size={14} color="#964b00" />
-                        <Text style={styles.badgeText}>{item.badge}</Text>
+                {/* Icon - terintegrasi dengan background */}
+                <View style={styles.iconSection}>
+                    <View style={[styles.iconBackground, { backgroundColor: item.color + '10' }]}>
+                        <View style={[styles.iconCircle, { backgroundColor: item.color + '20' }]}>
+                            <View style={[styles.iconInner, { backgroundColor: item.color }]}>
+                                <Ionicons name={item.icon} size={40} color="#ffffff" />
+                            </View>
+                        </View>
                     </View>
                 </View>
 
@@ -209,16 +182,14 @@ const OnboardingSlide = ({ item, index, scrollX }) => {
                 {/* Description */}
                 <Text style={styles.description}>{item.description}</Text>
 
-                {/* Feature Pills */}
-                <View style={styles.featurePills}>
+                {/* Feature List */}
+                <View style={styles.featureList}>
                     {item.features.map((feature, idx) => (
-                        <View key={idx} style={styles.featurePill}>
-                            <Ionicons
-                                name={idx === 0 ? 'checkmark-circle' : idx === 1 ? 'shield-checkmark' : 'flash'}
-                                size={14}
-                                color="#964b00"
-                            />
-                            <Text style={styles.featurePillText}>{feature}</Text>
+                        <View key={idx} style={styles.featureItem}>
+                            <View style={[styles.featureCheck, { backgroundColor: item.color + '15' }]}>
+                                <Ionicons name="checkmark" size={14} color={item.color} />
+                            </View>
+                            <Text style={styles.featureText}>{feature}</Text>
                         </View>
                     ))}
                 </View>
@@ -231,19 +202,8 @@ const PaginationDot = ({ index, scrollX }) => {
     const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
 
     const animatedStyle = useAnimatedStyle(() => {
-        const dotWidth = interpolate(
-            scrollX.value,
-            inputRange,
-            [8, 24, 8],
-            Extrapolate.CLAMP
-        );
-        const opacity = interpolate(
-            scrollX.value,
-            inputRange,
-            [0.4, 1, 0.4],
-            Extrapolate.CLAMP
-        );
-
+        const dotWidth = interpolate(scrollX.value, inputRange, [8, 28, 8], Extrapolate.CLAMP);
+        const opacity = interpolate(scrollX.value, inputRange, [0.3, 1, 0.3], Extrapolate.CLAMP);
         return { width: dotWidth, opacity };
     });
 
@@ -255,9 +215,11 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#ffffff',
     },
+    backgroundGradient: {
+        ...StyleSheet.absoluteFillObject,
+    },
     skipContainer: {
         position: 'absolute',
-        top: 60,
         right: 20,
         zIndex: 10,
     },
@@ -266,11 +228,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 4,
         paddingHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: '#faf8f5',
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#f0ebe3',
+        paddingVertical: 10,
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        ...SHADOWS.small,
     },
     skipText: {
         fontSize: 14,
@@ -280,108 +241,82 @@ const styles = StyleSheet.create({
     slide: {
         width,
         paddingHorizontal: SIZES.padding,
-        justifyContent: 'center',
     },
     slideContent: {
         alignItems: 'center',
     },
-    illustrationContainer: {
-        marginBottom: 32,
-        ...SHADOWS.large,
+    iconSection: {
+        marginBottom: 40,
     },
-    illustrationGradient: {
-        width: width * 0.55,
-        height: width * 0.55,
-        borderRadius: 40,
+    iconBackground: {
+        width: 180,
+        height: 180,
+        borderRadius: 90,
         alignItems: 'center',
         justifyContent: 'center',
-        overflow: 'hidden',
     },
-    illustrationDecor1: {
-        position: 'absolute',
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        top: -20,
-        right: -20,
-    },
-    illustrationDecor2: {
-        position: 'absolute',
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        bottom: 20,
-        left: 10,
-    },
-    emoji: {
-        fontSize: 80,
-    },
-    badgeContainer: {
-        marginBottom: 16,
-    },
-    badge: {
-        flexDirection: 'row',
+    iconCircle: {
+        width: 140,
+        height: 140,
+        borderRadius: 70,
         alignItems: 'center',
-        gap: 6,
-        backgroundColor: '#faf8f5',
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#f0ebe3',
+        justifyContent: 'center',
     },
-    badgeText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#964b00',
+    iconInner: {
+        width: 90,
+        height: 90,
+        borderRadius: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...SHADOWS.medium,
     },
     title: {
-        fontSize: 28,
+        fontSize: 30,
         fontWeight: '800',
         color: '#111827',
         textAlign: 'center',
-        marginBottom: 12,
+        marginBottom: 16,
         letterSpacing: -0.5,
     },
     description: {
-        fontSize: 15,
+        fontSize: 16,
         color: '#6b7280',
         textAlign: 'center',
-        lineHeight: 24,
-        paddingHorizontal: 20,
-        marginBottom: 24,
+        lineHeight: 26,
+        paddingHorizontal: 16,
+        marginBottom: 36,
     },
-    featurePills: {
-        flexDirection: 'row',
-        gap: 10,
+    featureList: {
+        gap: 14,
+        width: '100%',
+        paddingHorizontal: 40,
     },
-    featurePill: {
+    featureItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
-        backgroundColor: '#faf8f5',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: '#f0ebe3',
+        gap: 14,
     },
-    featurePillText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#7c3f06',
+    featureCheck: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    featureText: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: '#374151',
     },
     bottomSection: {
         paddingHorizontal: SIZES.padding,
-        paddingTop: 20,
+        backgroundColor: '#ffffff',
     },
     pagination: {
         flexDirection: 'row',
         justifyContent: 'center',
         gap: 8,
-        marginBottom: 24,
+        marginBottom: 28,
     },
     dot: {
         height: 8,
@@ -396,19 +331,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 16,
+        paddingVertical: 18,
         borderRadius: 16,
         gap: 10,
     },
     nextButtonText: {
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: '700',
         color: '#ffffff',
     },
     nextButtonIcon: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         backgroundColor: '#ffffff',
         alignItems: 'center',
         justifyContent: 'center',
@@ -418,11 +353,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     loginText: {
-        fontSize: 14,
+        fontSize: 15,
         color: '#6b7280',
     },
     loginLinkText: {
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '700',
         color: '#964b00',
     },
