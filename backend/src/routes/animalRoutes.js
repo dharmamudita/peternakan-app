@@ -1,22 +1,37 @@
 /**
  * Animal Routes
- * Routes untuk manajemen hewan (standalone)
+ * Routes untuk manajemen hewan
  */
 
 const express = require('express');
 const router = express.Router();
 const { farmController } = require('../controllers');
-const { authenticate, farmerOnly } = require('../middlewares');
+const { authenticate } = require('../middlewares');
+
+// Protected routes - require authentication
+router.use(authenticate);
+
+// Get my animals (user's animals)
+router.get('/my', farmController.getMyAnimals);
+
+// Get my animal stats
+router.get('/stats', farmController.getMyAnimalStats);
+router.get('/debug', farmController.debugAnimals);
+
+// Create animal
+router.post('/', farmController.createAnimal);
 
 // Get animal by ID
 router.get('/:id', farmController.getAnimalById);
 
-// Protected routes
-router.put('/:id', authenticate, farmerOnly, farmController.updateAnimal);
-router.delete('/:id', authenticate, farmerOnly, farmController.deleteAnimal);
+// Update animal
+router.put('/:id', farmController.updateAnimal);
+
+// Delete animal
+router.delete('/:id', farmController.deleteAnimal);
 
 // Health records for animal
-router.get('/:animalId/health-records', authenticate, farmController.getHealthRecords);
-router.post('/:animalId/health-records', authenticate, farmerOnly, farmController.addHealthRecord);
+router.get('/:animalId/health-records', farmController.getHealthRecords);
+router.post('/:animalId/health-records', farmController.addHealthRecord);
 
 module.exports = router;

@@ -233,6 +233,67 @@ class FarmService {
     }
 
     /**
+     * Mendapatkan hewan berdasarkan user (tanpa farmId)
+     */
+    static async getAnimalsByUser(userId, page = 1, limit = 50, filters = {}) {
+        try {
+            return await Animal.getByUserId(userId, page, limit, filters);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Mendapatkan statistik hewan berdasarkan user
+     */
+    static async getAnimalStatsByUser(userId) {
+        try {
+            return await Animal.getAnimalStatsByUser(userId);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Membuat hewan untuk user (tanpa farmId)
+     */
+    static async createAnimalForUser(userId, animalData) {
+        try {
+            const animal = await Animal.create({
+                ...animalData,
+                userId,
+                farmId: userId, // Use userId as farmId for simplicity
+            });
+            return animal;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Hapus hewan berdasarkan ID dan userId
+     */
+    static async deleteAnimalById(animalId, userId) {
+        try {
+            const animal = await Animal.getById(animalId);
+
+            if (!animal) {
+                throw new Error('Hewan tidak ditemukan');
+            }
+
+            // Check ownership (farmId or userId)
+            if (animal.farmId !== userId && animal.userId !== userId) {
+                throw new Error('Anda tidak memiliki akses ke hewan ini');
+            }
+
+            await Animal.delete(animalId);
+            return true;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Menambah catatan kesehatan
      */
     static async addHealthRecord(animalId, farmId, recordData) {
@@ -319,6 +380,10 @@ class FarmService {
         } catch (error) {
             throw error;
         }
+    }
+
+    static async debugGetAllAnimals() {
+        return await Animal.debugGetAll();
     }
 }
 

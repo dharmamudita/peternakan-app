@@ -184,6 +184,75 @@ class Animal {
 
         return stats;
     }
+
+    static async getByUserId(userId, page = 1, limit = 50, filters = {}) {
+        console.log('[DEBUG] Animal.getByUserId:', userId);
+        let query = db.collection(COLLECTIONS.ANIMALS)
+            .where('farmId', '==', userId)
+            .where('isActive', '==', true);
+
+        if (filters.type) {
+            query = query.where('type', '==', filters.type);
+        }
+        if (filters.healthStatus) {
+            query = query.where('healthStatus', '==', filters.healthStatus);
+        }
+        if (filters.gender) {
+            query = query.where('gender', '==', filters.gender);
+        }
+
+        const countSnapshot = await query.get();
+        console.log('[DEBUG] Found count:', countSnapshot.size);
+        const total = countSnapshot.size;
+
+        // Simplify query to avoid Index requirements
+        // query = query.orderBy('createdAt', 'desc')
+        //     .offset((page - 1) * limit)
+        //     .limit(limit);
+
+        const snapshot = await query.get();
+        const animals = snapshot.docs.map(doc => new Animal({ id: doc.id, ...doc.data() }));
+
+        return {
+            data: animals,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
+    }
+
+    static async getAnimalStatsByUser(userId) {
+        const snapshot = await db.collection(COLLECTIONS.ANIMALS)
+            .where('farmId', '==', userId)
+            .where('isActive', '==', true)
+            .get();
+
+        const stats = {
+            total: snapshot.size,
+            byType: {},
+            byGender: { male: 0, female: 0, unknown: 0 },
+            byHealthStatus: { healthy: 0, sick: 0, pregnant: 0 },
+            forSale: 0,
+        };
+
+        snapshot.docs.forEach(doc => {
+            const animal = doc.data();
+
+            stats.byType[animal.type] = (stats.byType[animal.type] || 0) + 1;
+            stats.byGender[animal.gender] = (stats.byGender[animal.gender] || 0) + 1;
+            stats.byHealthStatus[animal.healthStatus] = (stats.byHealthStatus[animal.healthStatus] || 0) + 1;
+            if (animal.isForSale) stats.forSale++;
+        });
+
+        return stats;
+    }
+    static async debugGetAll() {
+        const snapshot = await db.collection(COLLECTIONS.ANIMALS).orderBy('createdAt', 'desc').limit(20).get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
 }
 
 module.exports = Animal;

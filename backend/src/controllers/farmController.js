@@ -85,6 +85,43 @@ const getFarmDashboard = asyncHandler(async (req, res) => {
 // ==================== ANIMALS ====================
 
 /**
+ * Get my animals (user's animals)
+ * GET /api/animals/my
+ */
+const getMyAnimals = asyncHandler(async (req, res) => {
+    const { page, limit } = parsePagination(req.query);
+    const filters = parseFilters(req.query, ['type', 'healthStatus', 'gender', 'isForSale']);
+
+    const result = await FarmService.getAnimalsByUser(req.user.id, page, limit, filters);
+
+    return res.status(200).json({
+        success: true,
+        message: 'Data hewan berhasil diambil',
+        data: result.data.map(a => a.toJSON()),
+        pagination: result.pagination,
+    });
+});
+
+/**
+ * Get my animal stats (user's animal stats)
+ * GET /api/animals/stats
+ */
+const getMyAnimalStats = asyncHandler(async (req, res) => {
+    const stats = await FarmService.getAnimalStatsByUser(req.user.id);
+    return success(res, stats, 'Statistik berhasil diambil');
+});
+
+/**
+ * Create animal (for user)
+ * POST /api/animals
+ */
+const createAnimal = asyncHandler(async (req, res) => {
+    console.log('[DEBUG] CreateAnimal UserID:', req.user.id);
+    const animal = await FarmService.createAnimalForUser(req.user.id, req.body);
+    return created(res, animal.toJSON(), 'Hewan berhasil ditambahkan');
+});
+
+/**
  * Add animal to farm
  * POST /api/farms/:farmId/animals
  */
@@ -135,8 +172,7 @@ const updateAnimal = asyncHandler(async (req, res) => {
  * DELETE /api/animals/:id
  */
 const deleteAnimal = asyncHandler(async (req, res) => {
-    const animal = await FarmService.getAnimalById(req.params.id);
-    await FarmService.deleteAnimal(req.params.id, animal.farmId);
+    await FarmService.deleteAnimalById(req.params.id, req.user.id);
     return success(res, null, 'Hewan berhasil dihapus');
 });
 
@@ -209,7 +245,13 @@ const getUpcomingFollowUps = asyncHandler(async (req, res) => {
     return success(res, followUps.map(f => f.toJSON()), 'Follow-up berhasil diambil');
 });
 
+const debugAnimals = asyncHandler(async (req, res) => {
+    const animals = await FarmService.debugGetAllAnimals();
+    return success(res, animals, 'Debug data animals');
+});
+
 module.exports = {
+    debugAnimals, // Add Debug
     // Farm
     createFarm,
     getAllFarms,
@@ -219,6 +261,9 @@ module.exports = {
     deleteFarm,
     getFarmDashboard,
     // Animals
+    getMyAnimals,
+    getMyAnimalStats,
+    createAnimal,
     addAnimal,
     getAnimals,
     getAnimalById,

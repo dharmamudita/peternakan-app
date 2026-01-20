@@ -17,7 +17,8 @@ class AuthService {
             const decodedToken = await auth.verifyIdToken(idToken);
             return decodedToken;
         } catch (error) {
-            throw new Error('Token tidak valid');
+            console.error('Verify Token Error:', error.code, error.message);
+            throw new Error('Token tidak valid: ' + error.message);
         }
     }
 
