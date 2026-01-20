@@ -28,7 +28,14 @@ class AuthService {
     static async getUserFromToken(idToken) {
         try {
             const decodedToken = await this.verifyToken(idToken);
-            const user = await User.getById(decodedToken.uid);
+
+            // Try getById first (if document ID = UID)
+            let user = await User.getById(decodedToken.uid);
+
+            // Fallback to getByUid (if document has different ID but stores UID as field)
+            if (!user) {
+                user = await User.getByUid(decodedToken.uid);
+            }
 
             if (!user) {
                 throw new Error('User tidak ditemukan');
@@ -180,13 +187,25 @@ class AuthService {
                 user = new User({ id: doc.id, ...doc.data() });
                 userUid = user.id;
 
-                // Update data terbaru dari Facebook
-                await User.update(userUid, {
-                    displayName: displayName || user.displayName,
-                    photoURL: photoURL || user.photoURL,
+                // ONLY update facebookId and updatedAt
+                // DO NOT overwrite displayName and photoURL if user has customized them
+                const updateData = {
                     facebookId: facebookId,
                     updatedAt: new Date(),
-                });
+                };
+
+                // Only update displayName if user hasn't set one yet
+                if (!user.displayName) {
+                    updateData.displayName = displayName;
+                }
+
+                // Only update photoURL if user hasn't set a custom one (non-Facebook URL)
+                const isFacebookPhoto = user.photoURL && user.photoURL.includes('facebook.com');
+                if (!user.photoURL || isFacebookPhoto) {
+                    updateData.photoURL = photoURL;
+                }
+
+                await User.update(userUid, updateData);
 
                 // Refresh user data
                 user = await User.getById(userUid);
@@ -272,13 +291,28 @@ class AuthService {
                 user = new User({ id: doc.id, ...doc.data() });
                 userUid = user.id;
 
-                // Update data terbaru dari Google
-                await User.update(userUid, {
-                    displayName: displayName || user.displayName,
-                    photoURL: photoURL || user.photoURL,
+                // ONLY update googleId and updatedAt
+                // DO NOT overwrite displayName and photoURL if user has customized them
+                // (We preserve user's custom profile settings)
+                const updateData = {
                     googleId: googleId,
                     updatedAt: new Date(),
-                });
+                };
+
+                // Only update displayName if user hasn't set one yet
+                if (!user.displayName) {
+                    updateData.displayName = displayName;
+                }
+
+                // Only update photoURL if user hasn't set a custom one (non-Google URL)
+                const isGooglePhoto = user.photoURL && user.photoURL.includes('googleusercontent.com');
+                if (!user.photoURL || isGooglePhoto) {
+                    // User either has no photo or still has Google photo, update with latest Google photo
+                    updateData.photoURL = photoURL;
+                }
+                // If user has custom photo (non-Google), preserve it
+
+                await User.update(userUid, updateData);
 
                 // Refresh user data
                 user = await User.getById(userUid);
@@ -455,18 +489,26 @@ class AuthService {
      */
     static async updateProfile(uid, updateData) {
         try {
+            console.log('[DEBUG] updateProfile called with uid:', uid);
+            console.log('[DEBUG] updateProfile received data:', updateData);
+
             const allowedFields = ['displayName', 'phoneNumber', 'photoURL', 'address'];
             const filteredData = {};
 
             Object.keys(updateData).forEach(key => {
-                if (allowedFields.includes(key)) {
+                // Only include allowed fields AND exclude undefined values
+                if (allowedFields.includes(key) && updateData[key] !== undefined) {
                     filteredData[key] = updateData[key];
                 }
             });
 
+            console.log('[DEBUG] Filtered data to save:', filteredData);
+
             const user = await User.update(uid, filteredData);
+            console.log('[DEBUG] User after update:', user?.toJSON());
             return user;
         } catch (error) {
+            console.error('[DEBUG] updateProfile error:', error);
             throw error;
         }
     }

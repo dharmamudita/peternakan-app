@@ -145,9 +145,22 @@ class User {
 
     // Update user
     static async update(id, updateData) {
+        console.log('[User.update] Updating user with ID:', id);
+        console.log('[User.update] Update data:', updateData);
+
         updateData.updatedAt = new Date();
-        await db.collection(COLLECTIONS.USERS).doc(id).update(updateData);
-        return await User.getById(id);
+
+        try {
+            await db.collection(COLLECTIONS.USERS).doc(id).update(updateData);
+            console.log('[User.update] Firestore update successful');
+        } catch (err) {
+            console.error('[User.update] Firestore update FAILED:', err.message);
+            throw err;
+        }
+
+        const updatedUser = await User.getById(id);
+        console.log('[User.update] User after getById:', updatedUser?.toJSON());
+        return updatedUser;
     }
 
     // Delete user (soft delete)

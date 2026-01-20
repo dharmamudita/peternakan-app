@@ -130,7 +130,13 @@ const getProfile = asyncHandler(async (req, res) => {
  * PUT /api/auth/me
  */
 const updateProfile = asyncHandler(async (req, res) => {
+    console.log('========== UPDATE PROFILE START ==========');
+    console.log('[Controller] req.user:', req.user?.id, req.user?.email);
+    console.log('[Controller] req.body:', req.body);
+
     const { displayName, phoneNumber, photoURL, address } = req.body;
+
+    console.log('[Controller] Calling AuthService.updateProfile with ID:', req.user.id);
 
     const user = await AuthService.updateProfile(req.user.id, {
         displayName,
@@ -138,6 +144,9 @@ const updateProfile = asyncHandler(async (req, res) => {
         photoURL,
         address,
     });
+
+    console.log('[Controller] Updated user result:', user?.toJSON());
+    console.log('========== UPDATE PROFILE END ==========');
 
     return success(res, user.toJSON(), 'Profil berhasil diperbarui');
 });

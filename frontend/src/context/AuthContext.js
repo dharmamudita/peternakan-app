@@ -83,14 +83,20 @@ export const AuthProvider = ({ children }) => {
 
     const updateUser = async (userData) => {
         try {
+            console.log('[AuthContext] Calling updateProfile API with:', userData);
             const response = await authApi.updateProfile(userData);
+            console.log('[AuthContext] API Response:', response);
+
             if (response.success) {
+                console.log('[AuthContext] Update successful, setting user:', response.data);
                 setUser(response.data);
                 await storage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(response.data));
                 return { success: true };
             }
+            console.log('[AuthContext] Update failed, response.success is false');
             return { success: false, error: response.message };
         } catch (error) {
+            console.error('[AuthContext] Update error:', error);
             return { success: false, error: error.message };
         }
     };

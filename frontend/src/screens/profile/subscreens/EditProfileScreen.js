@@ -101,9 +101,15 @@ const EditProfileScreen = ({ navigation }) => {
             const result = await updateUser(updateData);
 
             if (result.success) {
-                Alert.alert('Sukses', 'Profil berhasil diperbarui.', [
-                    { text: 'OK', onPress: () => navigation.goBack() }
-                ]);
+                // Success popup for both web and native
+                if (Platform.OS === 'web') {
+                    window.alert('✅ Profil berhasil diperbarui!');
+                    navigation.goBack();
+                } else {
+                    Alert.alert('✅ Sukses', 'Profil berhasil diperbarui!', [
+                        { text: 'OK', onPress: () => navigation.goBack() }
+                    ]);
+                }
             } else {
                 throw new Error(result.error || 'Gagal update profil');
             }
