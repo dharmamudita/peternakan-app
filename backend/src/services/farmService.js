@@ -259,10 +259,35 @@ class FarmService {
      */
     static async createAnimalForUser(userId, animalData) {
         try {
+            const { quantity = 1, name, ...restData } = animalData;
+            const count = parseInt(quantity);
+
+            // Jika quantity > 1, lakukan batch create
+            if (count > 1) {
+                const limit = 50; // Batas batch per request agar tidak timeout
+                const actualCount = Math.min(count, limit);
+                const promises = [];
+
+                for (let i = 1; i <= actualCount; i++) {
+                    const numberedName = `${name} #${i}`;
+                    promises.push(Animal.create({
+                        ...restData,
+                        name: numberedName,
+                        userId,
+                        farmId: userId,
+                    }));
+                }
+
+                const results = await Promise.all(promises);
+                return results[0]; // Return data pertama saja sebagai respons
+            }
+
+            // Single create
             const animal = await Animal.create({
-                ...animalData,
+                name,
+                ...restData,
                 userId,
-                farmId: userId, // Use userId as farmId for simplicity
+                farmId: userId,
             });
             return animal;
         } catch (error) {

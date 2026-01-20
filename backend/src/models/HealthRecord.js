@@ -78,8 +78,8 @@ class HealthRecord {
 
     static async getByAnimalId(animalId, page = 1, limit = 10) {
         let query = db.collection(COLLECTIONS.HEALTH_RECORDS)
-            .where('animalId', '==', animalId)
-            .orderBy('recordDate', 'desc');
+            .where('animalId', '==', animalId);
+        // .orderBy('recordDate', 'desc');
 
         const countSnapshot = await query.get();
         const total = countSnapshot.size;
@@ -111,7 +111,8 @@ class HealthRecord {
         const countSnapshot = await query.get();
         const total = countSnapshot.size;
 
-        query = query.orderBy('recordDate', 'desc')
+        query = query
+            // .orderBy('recordDate', 'desc')
             .offset((page - 1) * limit)
             .limit(limit);
 
