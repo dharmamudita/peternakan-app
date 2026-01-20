@@ -63,29 +63,48 @@ const AnimalDetailScreen = ({ navigation, route }) => {
         }
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return '-';
-        return new Date(dateString).toLocaleDateString('id-ID', {
+    const formatDate = (date) => {
+        if (!date) return '-';
+        // Handle Firestore Timestamp (seconds)
+        if (date.seconds) {
+            return new Date(date.seconds * 1000).toLocaleDateString('id-ID', {
+                day: 'numeric', month: 'long', year: 'numeric'
+            });
+        }
+        // Handle standard Date string/object
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return '-';
+
+        return d.toLocaleDateString('id-ID', {
             day: 'numeric', month: 'long', year: 'numeric'
         });
     };
 
     const calculateAge = (birthDateString) => {
+        // ... (kode calculateAge yang sudah ada, biarkan atau copy paste ulang jika perlu konsistensi)
         if (!birthDateString) return '-';
         const birthDate = new Date(birthDateString);
         const today = new Date();
-
         let years = today.getFullYear() - birthDate.getFullYear();
         let months = today.getMonth() - birthDate.getMonth();
-
-        if (months < 0) {
-            years--;
-            months += 12;
-        }
-
+        if (months < 0) { years--; months += 12; }
         if (years > 0) return `${years} thn ${months} bln`;
         return `${months} bulan`;
     };
+
+    // Helper untuk status UI
+    const getStatusInfo = (status) => {
+        switch (status) {
+            case 'sick': return { label: 'Sakit', bg: '#fee2e2', color: '#dc2626' };
+            case 'pregnant': return { label: 'Hamil', bg: '#ffedd5', color: '#9a3412' };
+            default: return { label: 'Sehat', bg: '#dcfce7', color: '#10b981' };
+        }
+    };
+
+    const statusInfo = getStatusInfo(animal.healthStatus);
+
+    // ... (lanjut ke handleDeathReport dsb)
+
 
     const handleDeathReport = () => {
         const confirmMessage = 'Laporkan Kematian\n\nApakah hewan ini mati? Status akan diubah menjadi mati dan populasi aktif berkurang.';
@@ -175,13 +194,9 @@ const AnimalDetailScreen = ({ navigation, route }) => {
                         <View style={styles.profileInfo}>
                             <Text style={styles.name}>{animal.name}</Text>
                             <Text style={styles.breed}>{animal.breed || 'Tidak ada ras'}</Text>
-                            <View style={[styles.statusBadge,
-                            { backgroundColor: animal.healthStatus === 'sick' ? '#fef2f2' : '#ecfdf5' }
-                            ]}>
-                                <Text style={[styles.statusText,
-                                { color: animal.healthStatus === 'sick' ? '#dc2626' : '#10b981' }
-                                ]}>
-                                    {animal.healthStatus === 'sick' ? 'Sakit' : 'Sehat'}
+                            <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
+                                <Text style={[styles.statusText, { color: statusInfo.color }]}>
+                                    {statusInfo.label}
                                 </Text>
                             </View>
                         </View>
