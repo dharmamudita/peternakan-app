@@ -35,28 +35,40 @@ const HomeScreen = ({ navigation }) => {
     useFocusEffect(
         useCallback(() => {
             const loadDashboardData = async () => {
+                // 1. Load Animal Stats (Priority)
                 try {
-                    // Panggil API secara paralel agar cepat
-                    const [statsRes, productsRes, coursesRes] = await Promise.all([
-                        animalApi.getStats(),
-                        productApi.getAll({ limit: 1 }),
-                        courseApi.getAll({ limit: 1 })
-                    ]);
-
-                    // Unwrap responses
+                    const statsRes = await animalApi.getStats();
                     const statsData = statsRes.data || statsRes || {};
-                    const productsWrapper = productsRes.data || productsRes || {};
-                    const coursesWrapper = coursesRes.data || coursesRes || {};
-
-                    // Extract totals
-                    setDashboardData({
-                        totalAnimals: statsData.total || 0,
-                        totalProducts: productsWrapper.pagination?.total || 0,
-                        totalCourses: coursesWrapper.pagination?.total || 0,
-                    });
+                    setDashboardData(prev => ({
+                        ...prev,
+                        totalAnimals: statsData.total || 0
+                    }));
                 } catch (error) {
-                    // Silent fail, keep default 0 or old data
-                    console.log('Home Dashboard Load Error:', error.message);
+                    console.log('Home - Animal Stats Error:', error.message);
+                }
+
+                // 2. Load Products (Optional)
+                try {
+                    const productsRes = await productApi.getAll({ limit: 1 });
+                    const productsWrapper = productsRes.data || productsRes || {};
+                    setDashboardData(prev => ({
+                        ...prev,
+                        totalProducts: productsWrapper.pagination?.total || 0
+                    }));
+                } catch (error) {
+                    console.log('Home - Product API Error:', error.message);
+                }
+
+                // 3. Load Courses (Optional)
+                try {
+                    const coursesRes = await courseApi.getAll({ limit: 1 });
+                    const coursesWrapper = coursesRes.data || coursesRes || {};
+                    setDashboardData(prev => ({
+                        ...prev,
+                        totalCourses: coursesWrapper.pagination?.total || 0
+                    }));
+                } catch (error) {
+                    console.log('Home - Course API Error:', error.message);
                 }
             };
             loadDashboardData();
