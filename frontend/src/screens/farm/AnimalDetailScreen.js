@@ -19,7 +19,7 @@ const AnimalDetailScreen = ({ navigation, route }) => {
     const [loading, setLoading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [newRecord, setNewRecord] = useState({
-        recordType: 'checkup', diagnosis: '', treatment: '', notes: '', cost: '', nextVisitDate: ''
+        recordType: 'checkup', diagnosis: '', treatment: '', notes: '', cost: '', nextVisitDate: '', healthStatus: 'healthy'
     });
 
     useEffect(() => {
@@ -53,7 +53,7 @@ const AnimalDetailScreen = ({ navigation, route }) => {
                 date: new Date(),
             });
             setModalVisible(false);
-            setNewRecord({ recordType: 'checkup', diagnosis: '', treatment: '', notes: '', cost: '', nextVisitDate: '' });
+            setNewRecord({ recordType: 'checkup', diagnosis: '', treatment: '', notes: '', cost: '', nextVisitDate: '', healthStatus: animal.healthStatus });
             loadData();
             Alert.alert('Sukses', 'Catatan kesehatan ditambahkan');
         } catch (error) {
@@ -194,6 +194,34 @@ const AnimalDetailScreen = ({ navigation, route }) => {
                         </View>
 
                         <View style={styles.formGroup}>
+                            <Text style={styles.formLabel}>Status Kesehatan Sekarang</Text>
+                            <View style={{ flexDirection: 'row', gap: 10 }}>
+                                {['healthy', 'sick', 'pregnant'].map((status) => (
+                                    <TouchableOpacity
+                                        key={status}
+                                        style={[
+                                            styles.statusOption,
+                                            newRecord.healthStatus === status && styles.statusOptionActive,
+                                            status === 'sick' && newRecord.healthStatus === 'sick' && { backgroundColor: '#fee2e2', borderColor: '#ef4444' },
+                                            status === 'healthy' && newRecord.healthStatus === 'healthy' && { backgroundColor: '#dcfce7', borderColor: '#22c55e' },
+                                            status === 'pregnant' && newRecord.healthStatus === 'pregnant' && { backgroundColor: '#fef3c7', borderColor: '#f59e0b' }
+                                        ]}
+                                        onPress={() => setNewRecord({ ...newRecord, healthStatus: status })}
+                                    >
+                                        <Text style={[
+                                            styles.statusOptionText,
+                                            newRecord.healthStatus === status && { fontWeight: '700' },
+                                            status === 'sick' && newRecord.healthStatus === 'sick' && { color: '#b91c1c' },
+                                            status === 'healthy' && newRecord.healthStatus === 'healthy' && { color: '#15803d' },
+                                        ]}>
+                                            {status === 'healthy' ? 'Sehat' : status === 'sick' ? 'Sakit' : 'Hamil'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.formGroup}>
                             <Text style={styles.formLabel}>Biaya (Rp)</Text>
                             <TextInput
                                 style={styles.input}
@@ -264,6 +292,9 @@ const styles = StyleSheet.create({
     saveButton: { marginTop: 8, borderRadius: 14, overflow: 'hidden' },
     saveGradient: { paddingVertical: 16, alignItems: 'center' },
     saveButtonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+    statusOption: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#f9fafb' },
+    statusOptionActive: { borderColor: '#964b00', backgroundColor: '#fff7ed' },
+    statusOptionText: { fontSize: 13, color: '#4b5563' },
 });
 
 export default AnimalDetailScreen;
