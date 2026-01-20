@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Image, Dimensions, Platform, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -21,6 +21,32 @@ const ProfileScreen = ({ navigation }) => {
     const handleLogout = () => { logout(); };
 
     const isSeller = user?.role === 'seller';
+
+    const showFeatureAlert = (featureName) => {
+        if (Platform.OS === 'web') {
+            window.alert(`Fitur ${featureName} akan segera hadir!`);
+        } else {
+            Alert.alert('Segera Hadir', `Fitur ${featureName} sedang dalam pengembangan.`);
+        }
+    };
+
+    const handleChangePassword = () => {
+        // Check provider data for Google/Facebook
+        const isSocialLogin = user?.providerData?.some(
+            p => p.providerId === 'google.com' || p.providerId === 'facebook.com'
+        );
+
+        if (isSocialLogin) {
+            if (Platform.OS === 'web') {
+                window.alert('Akun Google/Facebook tidak dapat mengubah kata sandi di sini.');
+            } else {
+                Alert.alert('Akses Dibatasi', 'Anda masuk menggunakan akun sosial (Google/FB). Silakan ubah kata sandi melalui penyedia layanan tersebut.');
+            }
+            return;
+        }
+
+        showFeatureAlert('Ubah Password');
+    };
 
     const stats = [
         { label: 'Hewan', value: '12', icon: 'paw', color: '#964b00' },
@@ -40,23 +66,26 @@ const ProfileScreen = ({ navigation }) => {
         {
             title: 'Pengaturan Akun',
             items: [
-                { icon: 'person-outline', label: 'Edit Profil', color: '#7c3f06', action: () => { } },
-                { icon: 'lock-closed-outline', label: 'Ubah Password', color: '#b87333', action: () => { } },
-                { icon: 'location-outline', label: 'Alamat Tersimpan', color: '#5d3a1a', action: () => { } },
+                { icon: 'person-outline', label: 'Edit Profil', color: '#7c3f06', action: () => showFeatureAlert('Edit Profil') },
+                { icon: 'lock-closed-outline', label: 'Ubah Password', color: '#b87333', action: handleChangePassword },
+                { icon: 'card-outline', label: 'Metode Pembayaran', color: '#10b981', action: () => showFeatureAlert('Metode Pembayaran') },
+                { icon: 'location-outline', label: 'Alamat Tersimpan', color: '#5d3a1a', action: () => showFeatureAlert('Alamat Tersimpan') },
             ],
         },
         {
             title: 'Preferensi',
             items: [
                 { icon: 'notifications-outline', label: 'Notifikasi', color: '#964b00', type: 'switch', value: notifications, onValueChange: setNotifications },
-                { icon: 'globe-outline', label: 'Bahasa', color: '#7c3f06', value: 'Indonesia', action: () => { } },
+                { icon: 'globe-outline', label: 'Bahasa', color: '#7c3f06', value: 'Indonesia', action: () => showFeatureAlert('Ubah Bahasa') },
             ],
         },
         {
-            title: 'Bantuan',
+            title: 'Bantuan & Informasi',
             items: [
-                { icon: 'help-circle-outline', label: 'Pusat Bantuan', color: '#b87333', action: () => { } },
-                { icon: 'information-circle-outline', label: 'Tentang Aplikasi', color: '#5d3a1a', action: () => { } },
+                { icon: 'help-circle-outline', label: 'Pusat Bantuan', color: '#b87333', action: () => showFeatureAlert('Pusat Bantuan') },
+                { icon: 'people-outline', label: 'Peraturan Komunitas', color: '#7c3f06', action: () => showFeatureAlert('Peraturan Komunitas') },
+                { icon: 'shield-checkmark-outline', label: 'Kebijakan Privasi', color: '#10b981', action: () => showFeatureAlert('Kebijakan Privasi') },
+                { icon: 'information-circle-outline', label: 'Tentang Aplikasi', color: '#5d3a1a', action: () => showFeatureAlert('Tentang Aplikasi') },
             ],
         },
     ];
