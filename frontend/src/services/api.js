@@ -153,33 +153,35 @@ export const orderApi = {
 
 // Course endpoints
 export const courseApi = {
-    getAll: (params) => api.get('/courses', { params }),
-    getById: (id) => api.get(`/courses/${id}`),
-    getBySlug: (slug) => api.get(`/courses/slug/${slug}`),
-    getFeatured: (limit) => api.get('/courses/featured', { params: { limit } }),
-    getPopular: (limit) => api.get('/courses/popular', { params: { limit } }),
-    create: (data) => api.post('/courses', data),
-    update: (id, data) => api.put(`/courses/${id}`, data),
-    publish: (id) => api.put(`/courses/${id}/publish`),
-    enroll: (courseId) => api.post(`/courses/${courseId}/enroll`),
-    getProgress: (courseId) => api.get(`/courses/${courseId}/progress`),
-    getEnrolled: (params) => api.get('/courses/user/enrolled', { params }),
+    getAll: (params) => api.get('/education/courses', { params }),
+    getById: (id) => api.get(`/education/courses/${id}`),
+    getBySlug: (slug) => api.get(`/education/courses/slug/${slug}`),
+    getFeatured: (limit) => api.get('/education/courses/featured', { params: { limit } }),
+    getPopular: (limit) => api.get('/education/courses/popular', { params: { limit } }),
+    create: (data) => api.post('/education/courses', data),
+    update: (id, data) => api.put(`/education/courses/${id}`, data),
+    delete: (id) => api.delete(`/education/courses/${id}`),
+    publish: (id) => api.put(`/education/courses/${id}/publish`),
+    enroll: (courseId) => api.post(`/education/courses/${courseId}/enroll`),
+    getProgress: (courseId) => api.get(`/education/courses/${courseId}/progress`),
+    getEnrolled: (params) => api.get('/education/courses/enrolled', { params }),
     completeLesson: (courseId, lessonId, timeSpent) =>
-        api.post(`/courses/${courseId}/lessons/${lessonId}/complete`, { timeSpent }),
+        api.post(`/education/courses/${courseId}/lessons/${lessonId}/complete`, { timeSpent }),
 };
 
 // Material endpoints
 export const materialApi = {
-    getAll: (params) => api.get('/materials', { params }),
-    getById: (id) => api.get(`/materials/${id}`),
-    getBySlug: (slug) => api.get(`/materials/slug/${slug}`),
-    getFeatured: (limit) => api.get('/materials/featured', { params: { limit } }),
-    getPopular: (limit) => api.get('/materials/popular', { params: { limit } }),
-    getByAnimalType: (animalType, params) => api.get(`/materials/animal/${animalType}`, { params }),
-    create: (data) => api.post('/materials', data),
-    update: (id, data) => api.put(`/materials/${id}`, data),
-    like: (id) => api.post(`/materials/${id}/like`),
-    unlike: (id) => api.delete(`/materials/${id}/like`),
+    getAll: (params) => api.get('/education/materials', { params }),
+    getById: (id) => api.get(`/education/materials/${id}`),
+    getBySlug: (slug) => api.get(`/education/materials/slug/${slug}`),
+    getFeatured: (limit) => api.get('/education/materials/featured', { params: { limit } }),
+    getPopular: (limit) => api.get('/education/materials/popular', { params: { limit } }),
+    getByAnimalType: (animalType, params) => api.get(`/education/materials/animal/${animalType}`, { params }),
+    create: (data) => api.post('/education/materials', data),
+    update: (id, data) => api.put(`/education/materials/${id}`, data),
+    delete: (id) => api.delete(`/education/materials/${id}`),
+    like: (id) => api.post(`/education/materials/${id}/like`),
+    unlike: (id) => api.delete(`/education/materials/${id}/like`),
 };
 
 // Education dashboard
@@ -203,6 +205,13 @@ export const uploadApi = {
         headers: { 'Content-Type': 'multipart/form-data' },
     }),
     delete: (fileName) => api.delete(`/upload/${fileName}`),
+};
+
+// Notification endpoints
+export const notificationApi = {
+    sendBroadcast: (data) => api.post('/notifications/broadcast', data),
+    getAll: () => api.get('/notifications'),
+    markAsRead: (id) => api.put(`/notifications/${id}/read`),
 };
 
 export default api;

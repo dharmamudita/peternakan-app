@@ -37,6 +37,7 @@ class Course {
         this.publishedAt = data.publishedAt || null;
         this.createdAt = data.createdAt || new Date();
         this.updatedAt = data.updatedAt || new Date();
+        this.quiz = data.quiz || []; // Tambahkan Quiz
     }
 
     toJSON() {
@@ -70,6 +71,7 @@ class Course {
             publishedAt: this.publishedAt,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            quiz: this.quiz, // Include Quiz
         };
     }
 
@@ -146,7 +148,7 @@ class Course {
 
         const sortBy = filters.sortBy || 'createdAt';
         const sortOrder = filters.sortOrder || 'desc';
-        query = query.orderBy(sortBy, sortOrder)
+        query = query
             .offset((page - 1) * limit)
             .limit(limit);
 
@@ -213,7 +215,6 @@ class Course {
         const snapshot = await db.collection(COLLECTIONS.COURSES)
             .where('status', '==', COURSE_STATUS.PUBLISHED)
             .where('isFeatured', '==', true)
-            .orderBy('createdAt', 'desc')
             .limit(limit)
             .get();
 
@@ -223,7 +224,6 @@ class Course {
     static async getPopularCourses(limit = 6) {
         const snapshot = await db.collection(COLLECTIONS.COURSES)
             .where('status', '==', COURSE_STATUS.PUBLISHED)
-            .orderBy('totalEnrollments', 'desc')
             .limit(limit)
             .get();
 

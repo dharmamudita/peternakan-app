@@ -54,15 +54,27 @@ const ProfileScreen = ({ navigation }) => {
         { label: 'Kursus', value: '3', icon: 'book', color: '#b87333' },
     ];
 
+    const SUPER_ADMIN_EMAIL = 'dharmamudita404@gmail.com';
+    const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
+
     const menuItems = [
-        {
+        ...(isSuperAdmin ? [{
+            title: 'Panel Admin',
+            items: [
+                { icon: 'shield-checkmark-outline', label: 'Buka Dashboard Admin', color: '#dc2626', action: () => navigation.navigate('AdminDashboard') },
+            ]
+        }] : []),
+
+        // Hide Business/Store menu for Admin
+        ...(!isSuperAdmin ? [{
             title: isSeller ? 'Toko Saya' : 'Bisnis',
             items: isSeller ? [
                 { icon: 'storefront-outline', label: 'Dashboard Toko', color: '#964b00', action: () => navigation.navigate('SellerDashboard') },
             ] : [
                 { icon: 'id-card-outline', label: 'Daftar sebagai Penjual', color: '#964b00', action: () => navigation.navigate('SellerRegistration') },
             ]
-        },
+        }] : []),
+
         {
             title: 'Pengaturan Akun',
             items: [

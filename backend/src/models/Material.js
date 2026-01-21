@@ -137,7 +137,7 @@ class Material {
 
         const sortBy = filters.sortBy || 'createdAt';
         const sortOrder = filters.sortOrder || 'desc';
-        query = query.orderBy(sortBy, sortOrder)
+        query = query
             .offset((page - 1) * limit)
             .limit(limit);
 
@@ -163,7 +163,7 @@ class Material {
         const countSnapshot = await query.get();
         const total = countSnapshot.size;
 
-        query = query.orderBy('createdAt', 'desc')
+        query = query
             .offset((page - 1) * limit)
             .limit(limit);
 
@@ -240,7 +240,6 @@ class Material {
         const snapshot = await db.collection(COLLECTIONS.MATERIALS)
             .where('isPublished', '==', true)
             .where('isFeatured', '==', true)
-            .orderBy('createdAt', 'desc')
             .limit(limit)
             .get();
 
@@ -250,7 +249,6 @@ class Material {
     static async getPopularMaterials(limit = 6) {
         const snapshot = await db.collection(COLLECTIONS.MATERIALS)
             .where('isPublished', '==', true)
-            .orderBy('views', 'desc')
             .limit(limit)
             .get();
 

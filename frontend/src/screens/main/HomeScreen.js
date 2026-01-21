@@ -31,6 +31,27 @@ const HomeScreen = ({ navigation }) => {
         totalProducts: 0,
         totalCourses: 0,
     });
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useFocusEffect(
+        useCallback(() => {
+            const loadDashboardData = async () => {
+                // ... (Existing stats loading)
+
+                // 4. Load Notifications Count
+                try {
+                    const notifApi = require('../../services/api').notificationApi;
+                    const notifRes = await notifApi.getAll();
+                    const notifs = notifRes.data || [];
+                    const unread = notifs.filter(n => !n.isRead).length;
+                    setUnreadCount(unread);
+                } catch (error) {
+                    console.log('Home - Notif Error:', error.message);
+                }
+            };
+            loadDashboardData();
+        }, [])
+    );
 
     useFocusEffect(
         useCallback(() => {
@@ -166,9 +187,13 @@ const HomeScreen = ({ navigation }) => {
                             <TouchableOpacity style={styles.iconButton}>
                                 <Ionicons name="search-outline" size={22} color="#374151" />
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
+                            <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Notification')}>
                                 <Ionicons name="notifications-outline" size={22} color="#374151" />
-                                <View style={styles.notifBadge} />
+                                {unreadCount > 0 && (
+                                    <View style={styles.notifBadge}>
+                                        <Text style={styles.notifText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                                    </View>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </View>

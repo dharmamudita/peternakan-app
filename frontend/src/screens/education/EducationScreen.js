@@ -9,23 +9,55 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+import { educationApi, courseApi, materialApi } from '../../services/api';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 const EducationScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const [activeTab, setActiveTab] = useState('courses');
+    const [stats, setStats] = useState({ progress: 0, completed: 0, total: 0 });
+    const [courses, setCourses] = useState([]);
+    const [materials, setMaterials] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const courses = [
-        { id: '1', title: 'Manajemen Pakan Ternak', instructor: 'Dr. Budi', lessons: 12, rating: 4.8 },
-        { id: '2', title: 'Teknik Pembibitan Sapi', instructor: 'Ir. Ahmad', lessons: 8, rating: 4.9 },
-        { id: '3', title: 'Kesehatan Hewan Dasar', instructor: 'Drh. Siti', lessons: 15, rating: 4.7 },
-    ];
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchData();
+        }, [])
+    );
 
-    const articles = [
-        { id: '1', title: '5 Tips Mencegah Penyakit Ternak', category: 'Kesehatan', date: '12 Jan 2026' },
-        { id: '2', title: 'Panduan Memilih Bibit Unggul', category: 'Pembibitan', date: '10 Jan 2026' },
-    ];
+    const fetchData = async () => {
+        try {
+            const [statsRes, coursesRes, materialsRes] = await Promise.all([
+                educationApi.getDashboard(),
+                courseApi.getAll(),
+                materialApi.getAll()
+            ]);
+
+            const dashboard = statsRes.data || statsRes || {};
+            setStats({
+                progress: dashboard.progressPercentage || 0,
+                completed: dashboard.completedLessons || 0,
+                total: dashboard.totalLessons || 0
+            });
+
+            setCourses(coursesRes.data || coursesRes || []);
+            setMaterials(materialsRes.data || materialsRes || []);
+        } catch (error) {
+            console.error('Education Load Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toLocaleDateString('id-ID', {
+            day: 'numeric', month: 'short', year: 'numeric'
+        });
+    };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -42,16 +74,17 @@ const EducationScreen = ({ navigation }) => {
                     </View>
                 </Animated.View>
 
+                {/* Progress Section */}
                 <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.progressSection}>
                     <LinearGradient colors={['#964b00', '#7c3f06']} style={styles.progressCard}>
                         <View style={styles.progressDecor1} />
                         <View>
                             <Text style={styles.progressLabel}>Progress Belajar</Text>
-                            <Text style={styles.progressValue}>25%</Text>
+                            <Text style={styles.progressValue}>{stats.progress}%</Text>
                             <View style={styles.progressBarBg}>
-                                <View style={[styles.progressBarFill, { width: '25%' }]} />
+                                <View style={[styles.progressBarFill, { width: `${stats.progress}%` }]} />
                             </View>
-                            <Text style={styles.progressText}>12 dari 48 materi selesai</Text>
+                            <Text style={styles.progressText}>{stats.completed} dari {stats.total} materi selesai</Text>
                         </View>
                     </LinearGradient>
                 </Animated.View>
@@ -74,40 +107,62 @@ const EducationScreen = ({ navigation }) => {
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>{activeTab === 'courses' ? 'Kursus' : 'Artikel'}</Text>
+                    <Text style={styles.sectionTitle}>{activeTab === 'courses' ? 'Kursus' : 'Materi Pustaka'}</Text>
+
                     {activeTab === 'courses' ? (
-                        courses.map((course, i) => (
-                            <Animated.View key={course.id} entering={FadeInUp.delay(i * 100)}>
-                                <TouchableOpacity style={styles.card}>
-                                    <LinearGradient colors={['#964b00', '#7c3f06']} style={styles.cardIcon}>
-                                        <Ionicons name="play-circle" size={24} color="#fff" />
-                                    </LinearGradient>
-                                    <View style={styles.cardContent}>
-                                        <Text style={styles.cardTitle}>{course.title}</Text>
-                                        <Text style={styles.cardMeta}>{course.instructor} • {course.lessons} Modul</Text>
-                                    </View>
-                                    <View style={styles.ratingBadge}>
-                                        <Ionicons name="star" size={12} color="#f59e0b" />
-                                        <Text style={styles.ratingText}>{course.rating}</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            </Animated.View>
-                        ))
+                        courses.length > 0 ? (
+                            courses.map((course, i) => (
+                                <Animated.View key={course.id} entering={FadeInUp.delay(i * 100)}>
+                                    <TouchableOpacity
+                                        style={styles.card}
+                                        onPress={() => navigation.navigate('CourseDetail', { courseId: course.id })}
+                                    >
+                                        <LinearGradient colors={['#964b00', '#7c3f06']} style={styles.cardIcon}>
+                                            <Ionicons name="play-circle" size={24} color="#fff" />
+                                        </LinearGradient>
+                                        <View style={styles.cardContent}>
+                                            <Text style={styles.cardTitle}>{course.title}</Text>
+                                            <Text style={styles.cardMeta}>
+                                                {formatDate(course.createdAt)} • {course.lessons?.length || 0} Modul
+                                            </Text>
+                                        </View>
+                                        <View style={styles.freeBadge}>
+                                            <Text style={styles.freeText}>Gratis</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            ))
+                        ) : (
+                            <Text style={styles.emptyText}>Belum ada kursus tersedia</Text>
+                        )
                     ) : (
-                        articles.map((article, i) => (
-                            <Animated.View key={article.id} entering={FadeInUp.delay(i * 100)}>
-                                <TouchableOpacity style={styles.card}>
-                                    <View style={[styles.cardIcon, { backgroundColor: '#faf8f5' }]}>
-                                        <Ionicons name="document-text" size={22} color="#964b00" />
-                                    </View>
-                                    <View style={styles.cardContent}>
-                                        <Text style={styles.cardTitle}>{article.title}</Text>
-                                        <Text style={styles.cardMeta}>{article.category} • {article.date}</Text>
-                                    </View>
-                                    <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
-                                </TouchableOpacity>
-                            </Animated.View>
-                        ))
+                        materials.length > 0 ? (
+                            materials.map((item, i) => (
+                                <Animated.View key={item.id} entering={FadeInUp.delay(i * 100)}>
+                                    <TouchableOpacity
+                                        style={styles.card}
+                                        onPress={() => navigation.navigate('MaterialDetail', { materialId: item.id })}
+                                    >
+                                        <View style={[styles.cardIcon, { backgroundColor: '#faf8f5' }]}>
+                                            <Ionicons
+                                                name={item.type === 'video' ? 'videocam' : 'document-text'}
+                                                size={22}
+                                                color="#964b00"
+                                            />
+                                        </View>
+                                        <View style={styles.cardContent}>
+                                            <Text style={styles.cardTitle}>{item.title}</Text>
+                                            <Text style={styles.cardMeta}>
+                                                {item.category} • {formatDate(item.createdAt)}
+                                            </Text>
+                                        </View>
+                                        <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            ))
+                        ) : (
+                            <Text style={styles.emptyText}>Belum ada materi tersedia</Text>
+                        )
                     )}
                 </View>
                 <View style={{ height: 100 }} />
@@ -146,6 +201,9 @@ const styles = StyleSheet.create({
     cardMeta: { fontSize: 12, color: '#9ca3af' },
     ratingBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
     ratingText: { fontSize: 12, fontWeight: '600', color: '#92400e' },
+    freeBadge: { backgroundColor: '#d1fae5', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+    freeText: { fontSize: 12, fontWeight: '600', color: '#059669' },
+    emptyText: { fontSize: 14, color: '#9ca3af', textAlign: 'center', paddingVertical: 32 },
 });
 
 export default EducationScreen;

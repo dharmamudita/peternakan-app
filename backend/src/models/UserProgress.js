@@ -103,7 +103,7 @@ class UserProgress {
         const countSnapshot = await query.get();
         const total = countSnapshot.size;
 
-        query = query.orderBy('lastAccessedAt', 'desc')
+        query = query
             .offset((page - 1) * limit)
             .limit(limit);
 

@@ -26,7 +26,7 @@ class EducationService {
             const course = await Course.create({
                 ...courseData,
                 instructorId,
-                status: COURSE_STATUS.DRAFT,
+                status: COURSE_STATUS.PUBLISHED, // Auto-publish for admin
             });
 
             return course;
@@ -193,7 +193,7 @@ class EducationService {
             const material = await Material.create({
                 ...materialData,
                 authorId,
-                isPublished: false,
+                isPublished: true, // Auto-publish for admin
             });
 
             return material;

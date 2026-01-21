@@ -150,7 +150,7 @@ class Product {
         // Sorting
         const sortBy = filters.sortBy || 'createdAt';
         const sortOrder = filters.sortOrder || 'desc';
-        query = query.orderBy(sortBy, sortOrder)
+        query = query
             .offset((page - 1) * limit)
             .limit(limit);
 
@@ -173,7 +173,9 @@ class Product {
         // Untuk implementasi yang lebih baik, pertimbangkan Algolia atau Elasticsearch
         const snapshot = await db.collection(COLLECTIONS.PRODUCTS)
             .where('status', '==', PRODUCT_STATUS.ACTIVE)
-            .orderBy('name')
+            // .orderBy('name') - Removed to avoid index error
+            // .startAt(searchTerm) - search disabled temporarily to fix crash
+            // .endAt(searchTerm + '\uf8ff')
             .startAt(searchTerm)
             .endAt(searchTerm + '\uf8ff')
             .limit(limit)
@@ -230,7 +232,6 @@ class Product {
         const snapshot = await db.collection(COLLECTIONS.PRODUCTS)
             .where('status', '==', PRODUCT_STATUS.ACTIVE)
             .where('isFeatured', '==', true)
-            .orderBy('createdAt', 'desc')
             .limit(limit)
             .get();
 
@@ -240,7 +241,6 @@ class Product {
     static async getBestSellers(limit = 8) {
         const snapshot = await db.collection(COLLECTIONS.PRODUCTS)
             .where('status', '==', PRODUCT_STATUS.ACTIVE)
-            .orderBy('totalSold', 'desc')
             .limit(limit)
             .get();
 

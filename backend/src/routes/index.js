@@ -17,6 +17,7 @@ const courseRoutes = require('./courseRoutes');
 const materialRoutes = require('./materialRoutes');
 const educationRoutes = require('./educationRoutes');
 const uploadRoutes = require('./uploadRoutes');
+const notificationRoutes = require('./notificationRoutes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -59,5 +60,6 @@ router.use('/courses', courseRoutes);
 router.use('/materials', materialRoutes);
 router.use('/education', educationRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/notifications', notificationRoutes);
 
 module.exports = router;

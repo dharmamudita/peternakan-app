@@ -257,8 +257,8 @@ const schemas = {
     // Create course
     createCourse: {
         body: {
-            title: { required: true, type: 'string', minLength: 5, maxLength: 200 },
-            description: { required: true, type: 'string', minLength: 20 },
+            title: { required: true, type: 'string', minLength: 3, maxLength: 200 },
+            description: { required: true, type: 'string', minLength: 5 },
             category: { required: true, type: 'string' },
         },
     },
@@ -266,9 +266,10 @@ const schemas = {
     // Create material
     createMaterial: {
         body: {
-            title: { required: true, type: 'string', minLength: 5, maxLength: 200 },
+            title: { required: true, type: 'string', minLength: 3, maxLength: 200 },
             type: { required: true, type: 'string' },
-            categoryId: { required: true, type: 'string' },
+            category: { type: 'string' }, // Allow category
+            categoryId: { type: 'string' }, // Allow categoryId
         },
     },
 

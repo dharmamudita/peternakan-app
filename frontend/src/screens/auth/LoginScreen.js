@@ -67,12 +67,12 @@ const LoginScreen = ({ navigation }) => {
             const idToken = await authApi.exchangeCustomToken(rawToken);
             console.log('Token exchanged successfully');
             await login(idToken, user);
-            navigation.replace('MainTabs');
+            // navigation.replace('MainTabs'); // Handled by AuthContext state change
         } catch (exchangeError) {
             console.warn('Token exchange failed, trying with direct token:', exchangeError.message);
             // Fallback: coba pakai token langsung (siapa tahu sudah ID Token)
             await login(rawToken, user);
-            navigation.replace('MainTabs');
+            // navigation.replace('MainTabs'); // Handled by AuthContext state change
         }
     };
 
@@ -160,7 +160,7 @@ const LoginScreen = ({ navigation }) => {
 
                 if (token && user) {
                     await login(token, user);
-                    navigation.replace('MainTabs');
+                    // navigation.replace('MainTabs');
                 } else {
                     throw new Error('Token atau user tidak ditemukan dari Facebook');
                 }
@@ -200,7 +200,7 @@ const LoginScreen = ({ navigation }) => {
 
             if (token && user) {
                 await login(token, user);
-                navigation.replace('MainTabs');
+                // navigation.replace('MainTabs'); // Handled automatically by AppNavigator
             } else if (response?.success === false) {
                 throw new Error(response.message || 'Login gagal');
             } else {

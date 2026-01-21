@@ -30,6 +30,8 @@ import {
     FarmDashboardScreen,
     MarketplaceScreen,
     EducationScreen,
+    MaterialDetailScreen,
+    CourseDetailScreen,
     ProfileScreen,
     SellerRegistrationScreen,
     SellerDashboardScreen,
@@ -37,6 +39,10 @@ import {
     EditProfileScreen,
     ChangePasswordScreen,
     HelpScreen,
+    AdminDashboardScreen,
+    EducationManagementScreen,
+    BroadcastScreen,
+    NotificationScreen,
 } from '../screens';
 
 const Stack = createStackNavigator();
@@ -182,9 +188,15 @@ const AppNavigator = () => {
                         <Stack.Screen name="SellerRegistration" component={SellerRegistrationScreen} />
                         <Stack.Screen name="SellerDashboard" component={SellerDashboardScreen} />
                         <Stack.Screen name="AnimalDetail" component={AnimalDetailScreen} />
+                        <Stack.Screen name="MaterialDetail" component={MaterialDetailScreen} />
+                        <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
                         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
                         <Stack.Screen name="Help" component={HelpScreen} />
+                        <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+                        <Stack.Screen name="EducationManagement" component={EducationManagementScreen} />
+                        <Stack.Screen name="Broadcast" component={BroadcastScreen} />
+                        <Stack.Screen name="Notification" component={NotificationScreen} />
                     </>
                 ) : (
                     <Stack.Screen name="Auth" component={AuthStack} />

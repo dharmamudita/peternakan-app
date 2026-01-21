@@ -8,6 +8,7 @@ const farmController = require('./farmController');
 const marketplaceController = require('./marketplaceController');
 const educationController = require('./educationController');
 const uploadController = require('./uploadController');
+const notificationController = require('./notificationController');
 
 module.exports = {
     authController,
@@ -15,4 +16,5 @@ module.exports = {
     marketplaceController,
     educationController,
     uploadController,
+    notificationController,
 };
