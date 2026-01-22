@@ -8,6 +8,7 @@ const { success, created } = require('../utils/responseHelper');
  */
 const sendBroadcast = asyncHandler(async (req, res) => {
     const { title, message } = req.body;
+    console.log('[NotificationController] Sending broadcast:', { title, message });
 
     if (!title || !message) {
         throw new Error('Judul dan pesan wajib diisi');

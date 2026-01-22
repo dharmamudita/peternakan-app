@@ -15,7 +15,9 @@ import {
     Image,
     Platform,
     ActivityIndicator,
-    RefreshControl
+    RefreshControl,
+    Alert,
+    ToastAndroid
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -23,7 +25,7 @@ import Animated, { FadeInUp, FadeInDown, FadeInRight } from 'react-native-reanim
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
-import { productApi } from '../../services/api';
+import { productApi, cartApi } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 // Responsive column width calculation
@@ -81,6 +83,19 @@ const MarketplaceScreen = ({ navigation }) => {
         fetchProducts();
     };
 
+    const handleAddToCart = async (productId) => {
+        try {
+            await cartApi.addItem(productId, 1);
+            if (Platform.OS === 'android') {
+                ToastAndroid.show('Produk ditambahkan ke keranjang', ToastAndroid.SHORT);
+            } else {
+                Alert.alert('Sukses', 'Produk ditambahkan ke keranjang');
+            }
+        } catch (error) {
+            Alert.alert('Gagal', error.message || 'Gagal menambahkan ke keranjang');
+        }
+    };
+
     const banners = [
         {
             id: '1',
@@ -113,7 +128,7 @@ const MarketplaceScreen = ({ navigation }) => {
 
     // Client-side filtering
     const filteredProducts = products.filter(product => {
-        const matchesCategory = selectedCategory === 'Semua' || product.category === selectedCategory;
+        const matchesCategory = selectedCategory === 'Semua' || (product.category && product.category.toLowerCase() === selectedCategory.toLowerCase()) || (product.categoryId === selectedCategory);
         const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
         return matchesCategory && matchesSearch;
     });
@@ -133,9 +148,7 @@ const MarketplaceScreen = ({ navigation }) => {
                             <Text style={styles.headerTitle}>Marketplace</Text>
                         </View>
                         <View style={styles.headerRight}>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Ionicons name="heart-outline" size={22} color="#374151" />
-                            </TouchableOpacity>
+
                             <TouchableOpacity
                                 style={styles.iconButton}
                                 onPress={() => navigation.navigate('Cart')}
@@ -281,14 +294,19 @@ const MarketplaceScreen = ({ navigation }) => {
                                             <View style={styles.locationRow}>
                                                 <Ionicons name="location-outline" size={12} color="#9ca3af" />
                                                 <Text style={styles.locationText} numberOfLines={1}>
-                                                    {item.location || 'Indonesia'}
+                                                    {item.location && item.location !== 'Indonesia' ? item.location : '-'}
                                                 </Text>
                                             </View>
                                             <View style={styles.productFooter}>
-                                                <Text style={styles.soldText}>Stok: {item.stock}</Text>
-                                                <TouchableOpacity style={styles.addButton}>
-                                                    <Ionicons name="add" size={16} color="#ffffff" />
-                                                </TouchableOpacity>
+                                                <Text style={styles.soldText}>{item.totalSold || 0} Terjual</Text>
+                                                <View style={{ flexDirection: 'row', gap: 6 }}>
+                                                    <TouchableOpacity style={styles.cartBtn} onPress={() => handleAddToCart(item.id)}>
+                                                        <Ionicons name="cart-outline" size={16} color="#964b00" />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity style={styles.buyBtn} onPress={() => navigation.push('ProductDetail', { product: item })}>
+                                                        <Text style={styles.buyBtnText}>Beli</Text>
+                                                    </TouchableOpacity>
+                                                </View>
                                             </View>
                                         </View>
                                     </TouchableOpacity>
@@ -557,6 +575,29 @@ const styles = StyleSheet.create({
         backgroundColor: '#964b00',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    cartBtn: {
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#964b00',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff',
+    },
+    buyBtn: {
+        paddingHorizontal: 12,
+        height: 28,
+        borderRadius: 8,
+        backgroundColor: '#964b00',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    buyBtnText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: '700',
     },
     emptyContainer: {
         width: '100%',

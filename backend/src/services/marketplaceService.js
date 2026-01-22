@@ -24,17 +24,20 @@ class MarketplaceService {
                 await User.update(sellerId, { role: USER_ROLES.SELLER });
             }
 
-            // Get Shop ID
+            // Get Shop ID and Location
             let shopId = '';
+            let location = 'Indonesia';
             const shop = await Shop.getByUserId(sellerId);
             if (shop) {
                 shopId = shop.id;
+                if (shop.address) location = shop.address;
             }
 
             const product = await Product.create({
                 ...productData,
                 sellerId,
                 shopId,
+                location,
                 status: PRODUCT_STATUS.ACTIVE,
             });
 
@@ -102,6 +105,17 @@ class MarketplaceService {
     }
 
     /**
+     * Get product reviews
+     */
+    static async getProductReviews(productId, page = 1, limit = 10) {
+        try {
+            return await Product.getReviews(productId, page, limit);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Mendapatkan semua produk
      */
     static async getAllProducts(page = 1, limit = 10, filters = {}) {
@@ -110,7 +124,7 @@ class MarketplaceService {
 
             // Populate location from Shop
             const updatedData = await Promise.all(result.data.map(async (product) => {
-                let location = 'Indonesia';
+                let location = product.location || 'Indonesia';
                 try {
                     let shop = null;
                     if (product.shopId) {
@@ -397,9 +411,10 @@ class MarketplaceService {
                 notes: orderData.notes,
             });
 
-            // Update stok produk
+            // Update stok produk dan total terjual
             for (const item of cart.items) {
                 await Product.updateStock(item.productId, -item.quantity);
+                await Product.incrementSold(item.productId, item.quantity);
             }
 
             // Kosongkan keranjang
@@ -505,9 +520,10 @@ class MarketplaceService {
                 throw new Error('Pesanan tidak dapat dibatalkan');
             }
 
-            // Return stock
+            // Return stock and revert sold count
             for (const item of order.items) {
                 await Product.updateStock(item.productId, item.quantity);
+                await Product.incrementSold(item.productId, -item.quantity);
             }
 
             return await Order.updateStatus(orderId, ORDER_STATUS.CANCELLED, reason);

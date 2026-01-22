@@ -3,7 +3,7 @@
  * Sorting dilakukan in-memory untuk menghindari masalah Firebase Indexing.
  */
 
-const { db } = require('../config/firebase');
+const { db, admin } = require('../config/firebase');
 const { COLLECTIONS, PRODUCT_STATUS } = require('../config/constants');
 
 class Product {
@@ -221,6 +221,27 @@ class Product {
         return (await this.getAll(1, limit, {})).data; // Placeholder logic
     }
 
+    // Get reviews by product ID
+    static async getReviews(productId, page = 1, limit = 10) {
+        // Fetch all to avoid indexing issues for now, then sort/paginate in memory
+        const snapshot = await db.collection('reviews')
+            .where('productId', '==', productId)
+            .get();
+
+        let reviews = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : (new Date(doc.data().createdAt || Date.now()))
+        }));
+
+        // Sort desc
+        reviews.sort((a, b) => b.createdAt - a.createdAt);
+
+        // Paginate
+        const start = (page - 1) * limit;
+        return reviews.slice(start, start + limit);
+    }
+
     // Recalculate product rating
     static async recalculateRating(productId) {
         const snapshot = await db.collection(COLLECTIONS.PRODUCTS || 'products').doc(productId).collection('reviews').get();
@@ -239,6 +260,13 @@ class Product {
         await db.collection(COLLECTIONS.PRODUCTS || 'products').doc(productId).update({
             rating: Number(avg.toFixed(1)),
             totalReviews: ratings.length
+        });
+    }
+
+    static async incrementSold(id, quantity) {
+        if (!id || !quantity) return;
+        await db.collection(COLLECTIONS.PRODUCTS).doc(id).update({
+            totalSold: admin.firestore.FieldValue.increment(quantity)
         });
     }
 }

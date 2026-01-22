@@ -17,4 +17,5 @@ module.exports = {
     educationController,
     uploadController,
     notificationController,
+    reportController: require('./reportController'),
 };

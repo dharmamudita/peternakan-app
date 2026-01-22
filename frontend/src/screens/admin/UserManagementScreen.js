@@ -1,26 +1,44 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, StatusBar, Image, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, StatusBar, Image, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SHADOWS } from '../../constants/theme';
+import { userApi } from '../../services/api';
 
 const UserManagementScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const [searchQuery, setSearchQuery] = useState('');
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
 
-    // Data Dummy Pengguna
-    const [users, setUsers] = useState([
-        { id: '1', name: 'Ahmad Dahlan', email: 'ahmad.dahlan@example.com', role: 'user', status: 'active', joinedAt: '12 Jan 2024', avatar: null },
-        { id: '2', name: 'Siti Aminah', email: 'siti.aminah@example.com', role: 'seller', status: 'active', joinedAt: '10 Feb 2024', avatar: 'https://via.placeholder.com/150' },
-        { id: '3', name: 'Budi Santoso', email: 'budi.santoso@gmail.com', role: 'user', status: 'suspended', joinedAt: '05 Mar 2024', avatar: null },
-        { id: '4', name: 'Rahmat Hidayat', email: 'rahmat.h@yahoo.com', role: 'seller', status: 'active', joinedAt: '20 Mar 2024', avatar: null },
-        { id: '5', name: 'Admin Peternakan', email: 'admin@peternakan.id', role: 'admin', status: 'active', joinedAt: '01 Jan 2024', avatar: null },
-        { id: '6', name: 'Joko Widodo', email: 'jokowi@example.com', role: 'user', status: 'active', joinedAt: '15 Apr 2024', avatar: null },
-    ]);
+    const fetchUsers = async () => {
+        try {
+            setLoading(true);
+            const response = await userApi.getAll({
+                page: 1,
+                limit: 100 // Fetch 100 for now to simplify instead of pagination
+            });
+            setUsers(response.data);
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'Gagal memuat data pengguna');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchUsers();
+        }, [])
+    );
 
     const filteredUsers = users.filter(user =>
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+        (user.displayName || user.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (user.email || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const getRoleColor = (role) => {
@@ -73,22 +91,26 @@ const UserManagementScreen = ({ navigation }) => {
             <View style={styles.userInfoRow}>
                 {/* Avatar */}
                 <View style={styles.avatarContainer}>
-                    {item.avatar ? (
-                        <Image source={{ uri: item.avatar }} style={styles.avatar} />
+                    {item.photoURL ? (
+                        <Image source={{ uri: item.photoURL }} style={styles.avatar} />
                     ) : (
-                        <Text style={styles.avatarText}>{item.name.charAt(0)}</Text>
+                        <Text style={styles.avatarText}>
+                            {(item.displayName || item.name || 'U').charAt(0).toUpperCase()}
+                        </Text>
                     )}
                 </View>
 
                 {/* Info Text */}
                 <View style={styles.userDetails}>
-                    <Text style={styles.userName}>{item.name}</Text>
+                    <Text style={styles.userName}>{item.displayName || item.name || 'Tanpa Nama'}</Text>
                     <Text style={styles.userEmail}>{item.email}</Text>
                     <View style={styles.metaRow}>
-                        <Text style={styles.joinDate}>Gabung: {item.joinedAt}</Text>
-                        {item.status === 'suspended' && (
+                        <Text style={styles.joinDate}>
+                            Gabung: {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID') : '-'}
+                        </Text>
+                        {!item.isActive && (
                             <View style={styles.suspendBadge}>
-                                <Text style={styles.suspendText}>Suspended</Text>
+                                <Text style={styles.suspendText}>Nonaktif</Text>
                             </View>
                         )}
                     </View>
@@ -109,19 +131,23 @@ const UserManagementScreen = ({ navigation }) => {
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
             {renderHeader()}
 
-            <FlatList
-                data={filteredUsers}
-                renderItem={renderUserItem}
-                keyExtractor={item => item.id}
-                contentContainerStyle={styles.listContainer}
-                showsVerticalScrollIndicator={false}
-                ListEmptyComponent={() => (
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="people-outline" size={64} color="#d1d5db" />
-                        <Text style={styles.emptyText}>Tidak ada pengguna ditemukan</Text>
-                    </View>
-                )}
-            />
+            {loading ? (
+                <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 50 }} />
+            ) : (
+                <FlatList
+                    data={filteredUsers}
+                    renderItem={renderUserItem}
+                    keyExtractor={item => item.id || item.uid}
+                    contentContainerStyle={styles.listContainer}
+                    showsVerticalScrollIndicator={false}
+                    ListEmptyComponent={() => (
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="people-outline" size={64} color="#d1d5db" />
+                            <Text style={styles.emptyText}>Tidak ada pengguna ditemukan</Text>
+                        </View>
+                    )}
+                />
+            )}
         </View>
     );
 };

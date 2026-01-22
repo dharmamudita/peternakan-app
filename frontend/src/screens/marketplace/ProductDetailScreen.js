@@ -6,13 +6,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Image, Dimensions, Platform, StatusBar, Alert, Animated, ActivityIndicator
+    Image, Dimensions, Platform, StatusBar, Alert, Animated, ActivityIndicator, ToastAndroid
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
-import { orderApi, shopApi } from '../../services/api';
+import { orderApi, shopApi, productApi, cartApi } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -72,6 +72,9 @@ const ProductDetailScreen = ({ navigation, route }) => {
     const [shop, setShop] = useState(null);
     const [loadingShop, setLoadingShop] = useState(false);
 
+    // Reviews State
+    const [reviews, setReviews] = useState([]);
+
     useEffect(() => {
         const fetchShop = async () => {
             setLoadingShop(true);
@@ -92,8 +95,19 @@ const ProductDetailScreen = ({ navigation, route }) => {
             }
         };
 
+        const fetchReviews = async () => {
+            try {
+                const res = await productApi.getReviews(product.id, { limit: 5 });
+                if (res.data && Array.isArray(res.data)) setReviews(res.data);
+                else if (Array.isArray(res)) setReviews(res);
+            } catch (error) {
+                console.log('Error fetching reviews:', error);
+            }
+        };
+
         if (product) {
             fetchShop();
+            fetchReviews();
         }
     }, [product]);
 
@@ -139,6 +153,20 @@ const ProductDetailScreen = ({ navigation, route }) => {
         }
     };
 
+    const handleAddToCart = async () => {
+        try {
+            await cartApi.addItem(product.id, 1);
+            if (Platform.OS === 'android') {
+                ToastAndroid.show('Produk ditambahkan ke keranjang', ToastAndroid.SHORT);
+            } else {
+                Alert.alert('Sukses', 'Produk ditambahkan ke keranjang');
+            }
+        } catch (error) {
+            console.log('Error adding to cart:', error);
+            Alert.alert('Gagal', error.message || 'Gagal menambahkan ke keranjang');
+        }
+    };
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -153,14 +181,10 @@ const ProductDetailScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
 
                 <View style={styles.headerRight}>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Ionicons name="share-social-outline" size={24} color="#374151" />
-                    </TouchableOpacity>
+
                     <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Cart')}>
                         <Ionicons name="cart-outline" size={24} color="#374151" />
-                        <View style={styles.cartBadge}>
-                            <Text style={styles.cartBadgeText}>2</Text>
-                        </View>
+
                     </TouchableOpacity>
                 </View>
             </View>
@@ -224,25 +248,19 @@ const ProductDetailScreen = ({ navigation, route }) => {
                                     <Text style={styles.price}>{formatPrice(product.price)}</Text>
                                     <Text style={styles.title}>{product.name}</Text>
                                 </View>
-                                <TouchableOpacity onPress={() => setIsFavorite(!isFavorite)}>
-                                    <Ionicons
-                                        name={isFavorite ? "heart" : "heart-outline"}
-                                        size={28}
-                                        color={isFavorite ? "#ef4444" : "#9ca3af"}
-                                    />
-                                </TouchableOpacity>
+
                             </View>
 
                             <View style={styles.metaRow}>
                                 <View style={styles.ratingBox}>
                                     <Ionicons name="star" size={16} color="#f59e0b" />
-                                    <Text style={styles.ratingText}>{product.rating || '4.8'} (24 ulasan)</Text>
+                                    <Text style={styles.ratingText}>{product.rating > 0 ? product.rating : 'Baru'} {product.totalReviews ? `(${product.totalReviews})` : ''}</Text>
                                 </View>
                                 <View style={styles.separator} />
-                                <Text style={styles.soldText}>{product.sold || '0'} Terjual</Text>
+                                <Text style={styles.soldText}>{product.totalSold || product.sold || '0'} Terjual</Text>
                                 <View style={styles.separator} />
                                 <Ionicons name="location-outline" size={14} color="#6b7280" />
-                                <Text style={[styles.soldText, { marginLeft: 2 }]}>{product.location || 'Jawa Timur'}</Text>
+                                <Text style={[styles.soldText, { marginLeft: 2 }]}>{product.location || shop?.address || 'Indonesia'}</Text>
                             </View>
                         </View>
 
@@ -299,28 +317,26 @@ const ProductDetailScreen = ({ navigation, route }) => {
                             <Text style={styles.sectionTitle}>Detail Produk</Text>
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Kategori</Text>
-                                <Text style={styles.infoValue}>{product.category || 'Sapi'}</Text>
+                                <Text style={styles.infoValue}>{product.category || '-'}</Text>
                             </View>
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Berat</Text>
-                                <Text style={styles.infoValue}>350 Kg</Text>
+                                <Text style={styles.infoValue}>{product.weight ? `${product.weight} ${product.unit || 'Kg'}` : '-'}</Text>
                             </View>
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Umur</Text>
-                                <Text style={styles.infoValue}>2.5 Tahun</Text>
+                                <Text style={styles.infoValue}>{product.age || product.specifications?.age || '-'}</Text>
                             </View>
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Stok</Text>
-                                <Text style={styles.infoValue}>5 Ekor</Text>
+                                <Text style={styles.infoValue}>{product.stock} {product.unit || 'Pcs'}</Text>
                             </View>
                         </View>
 
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Deskripsi</Text>
                             <Text style={styles.description}>
-                                Sapi Limosin kualitas super, sehat dan sudah vaksin lengkap.
-                                Cocok untuk penggemukan atau kurban. Pakan terjamin fermentasi dan konsentrat.
-                                Siap kirim ke seluruh area Jawa Timur. Garansi kesehatan sampai tujuan.
+                                {product.description || 'Tidak ada deskripsi.'}
                             </Text>
                         </View>
 
@@ -329,36 +345,43 @@ const ProductDetailScreen = ({ navigation, route }) => {
                         {/* Reviews */}
                         <View style={styles.section}>
                             <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionTitle}>Ulasan Pembeli</Text>
-                                <TouchableOpacity onPress={() => navigation.navigate('SellerProfile', {
-                                    shopId: shop?.id,
-                                    sellerId: shop?.userId || product.sellerId,
-                                    sellerData: shop
-                                })}>
-                                    <Text style={styles.seeAllText}>Lihat Ulasan Toko</Text>
-                                </TouchableOpacity>
+                                <Text style={styles.sectionTitle}>Ulasan Pembeli ({reviews.length})</Text>
                             </View>
-                            <TouchableOpacity
-                                style={{
-                                    padding: 15,
-                                    backgroundColor: '#f9fafb',
-                                    borderRadius: 12,
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between'
-                                }}
-                                onPress={() => navigation.navigate('SellerProfile', {
-                                    shopId: shop?.id,
-                                    sellerId: shop?.userId || product.sellerId,
-                                    sellerData: shop
-                                })}
-                            >
-                                <View>
-                                    <Text style={{ fontWeight: 'bold', color: '#374151' }}>Cek Reputasi Toko</Text>
-                                    <Text style={{ color: '#9ca3af', fontSize: 12, marginTop: 4 }}>Lihat komentar dan rating dari pembeli lain</Text>
+
+                            {reviews.length > 0 ? (
+                                reviews.map((review, index) => (
+                                    <View key={review.id || index} style={styles.reviewCard}>
+                                        <View style={styles.reviewHeader}>
+                                            <View style={styles.reviewUser}>
+                                                <View style={styles.reviewAvatar}>
+                                                    <Text style={styles.reviewAvatarText}>
+                                                        {review.buyerName ? review.buyerName.substring(0, 1).toUpperCase() : 'U'}
+                                                    </Text>
+                                                </View>
+                                                <View>
+                                                    <Text style={styles.reviewName}>{review.buyerName || 'Pengguna'}</Text>
+                                                    <Text style={styles.reviewDate}>
+                                                        {new Date(review.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            <View style={styles.ratingBox}>
+                                                <Ionicons name="star" size={14} color="#f59e0b" />
+                                                <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#b45309' }}>{review.rating}.0</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.reviewComment}>{review.comment}</Text>
+                                    </View>
+                                ))
+                            ) : (
+                                <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12 }}>
+                                    <Ionicons name="chatbubble-outline" size={32} color="#d1d5db" style={{ marginBottom: 8 }} />
+                                    <Text style={{ color: '#6b7280', textAlign: 'center', fontWeight: '500' }}>Belum ada ulasan</Text>
+                                    <Text style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', marginTop: 4 }}>
+                                        Jadilah yang pertama membeli dan mengulas produk ini!
+                                    </Text>
                                 </View>
-                                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-                            </TouchableOpacity>
+                            )}
                         </View>
 
                     </View>
@@ -369,6 +392,9 @@ const ProductDetailScreen = ({ navigation, route }) => {
             <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
                 <TouchableOpacity style={styles.cartButton}>
                     <Ionicons name="chatbubbles-outline" size={24} color="#374151" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cartButton} onPress={handleAddToCart}>
+                    <Ionicons name="cart-outline" size={24} color="#374151" />
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.buyButton, isBuying && { opacity: 0.7 }]}

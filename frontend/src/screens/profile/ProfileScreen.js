@@ -127,13 +127,7 @@ const ProfileScreen = ({ navigation }) => {
                 { icon: 'location-outline', label: 'Alamat Tersimpan', color: '#5d3a1a', action: () => showFeatureAlert('Alamat Tersimpan') },
             ],
         },
-        {
-            title: 'Preferensi',
-            items: [
-                { icon: 'notifications-outline', label: 'Notifikasi', color: '#964b00', type: 'switch', value: notifications, onValueChange: setNotifications },
-                { icon: 'globe-outline', label: 'Bahasa', color: '#7c3f06', value: 'Indonesia', action: () => showFeatureAlert('Ubah Bahasa') },
-            ],
-        },
+
         {
             title: 'Bantuan & Informasi',
             items: [

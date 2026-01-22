@@ -18,4 +18,5 @@ export { default as EducationManagementScreen } from './admin/EducationManagemen
 export { default as UserManagementScreen } from './admin/UserManagementScreen';
 export { default as BroadcastScreen } from './admin/BroadcastScreen';
 export { default as SellerManagementScreen } from './admin/SellerManagementScreen';
+export { default as ReportIssuesScreen } from './admin/ReportIssuesScreen';
 export { default as NotificationScreen } from './notification/NotificationScreen';

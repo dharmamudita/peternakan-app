@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SHADOWS, SIZES } from '../../constants/theme';
 import { productApi, shopApi } from '../../services/api';
 
@@ -91,20 +92,8 @@ const SellerProfileScreen = ({ navigation, route }) => {
                 return;
             }
 
-            // 2. Fetch Reviews
-            try {
-                const reviewRes = await shopApi.getReviews(currentShopId);
-                if (reviewRes.data) {
-                    const revs = reviewRes.data;
-                    setReviews(revs);
-                    if (revs.length > 0) {
-                        const total = revs.reduce((acc, r) => acc + Number(r.rating), 0);
-                        setAvgRating((total / revs.length).toFixed(1));
-                    }
-                }
-            } catch (e) {
-                console.log('Error fetching reviews:', e);
-            }
+            // 2. Fetch Reviews - Removed
+            // Reviews are now only shown on Product Detail page
 
             // 3. Fetch Products
             let productsData = [];
@@ -154,157 +143,128 @@ const SellerProfileScreen = ({ navigation, route }) => {
         navigation.goBack();
     };
 
-    const renderReviews = () => {
-        if (reviews.length === 0) {
-            return (
-                <View style={{ padding: 40, alignItems: 'center' }}>
-                    <Ionicons name="chatbubble-outline" size={48} color="#d1d5db" />
-                    <Text style={{ color: '#9ca3af', marginTop: 10 }}>Belum ada ulasan</Text>
-                </View>
-            );
-        }
-        return (
-            <View style={styles.reviewsList}>
-                {reviews.map((review) => (
-                    <View key={review.id} style={styles.reviewCard}>
-                        <View style={styles.reviewHeader}>
-                            <View style={styles.reviewerInfo}>
-                                <View style={styles.reviewerAvatar}>
-                                    <Text style={styles.reviewerInitial}>{review.buyerName ? review.buyerName.charAt(0).toUpperCase() : 'U'}</Text>
-                                </View>
-                                <View>
-                                    <Text style={styles.reviewerName}>{review.buyerName || 'User'}</Text>
-                                    <View style={{ flexDirection: 'row' }}>
-                                        {[1, 2, 3, 4, 5].map(i => (
-                                            <Ionicons key={i} name="star" size={12} color={i <= review.rating ? "#f59e0b" : "#e5e7eb"} />
-                                        ))}
-                                    </View>
-                                </View>
-                            </View>
-                            <Text style={styles.reviewDate}>
-                                {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
-                            </Text>
-                        </View>
-                        {review.comment && <Text style={styles.reviewComment}>{review.comment}</Text>}
-                    </View>
-                ))}
-            </View>
-        );
-    };
+
 
     return (
         <View style={styles.container}>
-            <View style={[styles.headerWhite, { paddingTop: insets.top }]}>
-                <TouchableOpacity style={styles.backButtonSimple} onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={24} color="#111827" />
+            {/* Custom Header */}
+            <View style={[styles.customHeader, { paddingTop: insets.top }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Detail Toko</Text>
-                {!asAdmin ? (
-                    <TouchableOpacity style={styles.backButtonSimple}>
-                        <Ionicons name="search" size={24} color="#111827" />
-                    </TouchableOpacity>
-                ) : <View style={{ width: 40 }} />}
+                <Text style={styles.headerTitleWhite}>Profil Penjual</Text>
+
             </View>
 
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            >
-                {/* Profile Info Card */}
-                <View style={styles.profileSection}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+                {/* Banner */}
+                <LinearGradient
+                    colors={['#8B4513', '#A0522D']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                    style={styles.banner}
+                >
+                    <View style={styles.bannerOverlay} />
+                </LinearGradient>
+
+                {/* Floating Profile Card */}
+                <View style={styles.profileContainer}>
                     <View style={styles.profileCard}>
-                        <View style={styles.avatarContainer}>
-                            <Text style={styles.avatarText}>{displaySeller.name.charAt(0)}</Text>
-                            {displaySeller.online && <View style={styles.onlineStatus} />}
-                        </View>
-                        <View style={styles.profileInfo}>
-                            <Text style={styles.shopName}>{displaySeller.name}</Text>
-                            <View style={styles.locationRow}>
-                                <Ionicons name="location-outline" size={14} color="#6b7280" />
-                                <Text style={styles.locationText}>{displaySeller.location}</Text>
+                        <View style={styles.topProfileRow}>
+                            <View style={styles.avatarMain}>
+                                <Text style={styles.avatarText}>{displaySeller.name.charAt(0).toUpperCase()}</Text>
+                                {displaySeller.online && <View style={styles.onlineIndicator} />}
                             </View>
-                            <View style={styles.statsRow}>
-                                <View style={styles.statItem}>
-                                    <Ionicons name="star" size={14} color="#f59e0b" />
-                                    <Text style={styles.statText}>{displaySeller.rating}</Text>
-                                    <Text style={styles.statLabel}>({reviews.length} Ulasan)</Text>
+                            <View style={styles.detailsCol}>
+                                <Text style={styles.sellerName}>{displaySeller.name}</Text>
+                                <View style={styles.locationBadge}>
+                                    <Ionicons name="location-sharp" size={12} color="#fff" />
+                                    <Text style={styles.locationBadgeText}>{displaySeller.location}</Text>
                                 </View>
-                                <View style={styles.divider} />
-                                <Text style={styles.statText}>{displaySeller.followers} Pengikut</Text>
+                                {displaySeller.status === 'verified' && (
+                                    <View style={styles.verifiedRow}>
+                                        <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+                                        <Text style={styles.verifiedText}>Terverifikasi</Text>
+                                    </View>
+                                )}
                             </View>
                         </View>
-                    </View>
-                    {/* Admin Actions */}
-                    {asAdmin && sellerData?.status === 'PENDING' && (
-                        <View style={styles.adminActions}>
-                            <TouchableOpacity style={styles.verifyButton} onPress={handleVerify}>
-                                <Text style={styles.verifyButtonText}>Verifikasi Toko</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.rejectButton} onPress={handleReject}>
-                                <Text style={styles.rejectButtonText}>Tolak</Text>
-                            </TouchableOpacity>
+
+                        <View style={styles.divider} />
+
+                        <View style={styles.statsRow}>
+                            <View style={styles.statBox}>
+                                <Text style={styles.statValue}>{displaySeller.rating}</Text>
+                                <Text style={styles.statLabel}>Rating</Text>
+                            </View>
+
+                            <View style={styles.statSep} />
+                            <View style={styles.statBox}>
+                                <Text style={styles.statValue}>{products.length}</Text>
+                                <Text style={styles.statLabel}>Produk</Text>
+                            </View>
+                            <View style={styles.statSep} />
+                            <View style={styles.statBox}>
+                                <Text style={styles.statValue}>{displaySeller.joinedAt !== '-' ? '2 Thn' : 'Baru'}</Text>
+                                <Text style={styles.statLabel}>Bergabung</Text>
+                            </View>
                         </View>
-                    )}
+
+                        {/* Admin Approvals */}
+                        {asAdmin && sellerData?.status === 'PENDING' && (
+                            <View style={styles.adminActions}>
+                                <TouchableOpacity style={styles.btnVerify} onPress={handleVerify}>
+                                    <Text style={styles.btnTextWhite}>Verifikasi Toko</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.btnReject} onPress={handleReject}>
+                                    <Text style={styles.btnTextRed}>Tolak</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
                 </View>
 
-                {/* Tabs */}
-                <View style={styles.tabsContainer}>
-                    <TouchableOpacity
-                        style={[styles.tabItem, activeTab === 'products' && styles.activeTabItem]}
-                        onPress={() => setActiveTab('products')}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'products' && styles.activeTabText]}>Produk</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.tabItem, activeTab === 'reviews' && styles.activeTabItem]}
-                        onPress={() => setActiveTab('reviews')}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'reviews' && styles.activeTabText]}>Ulasan</Text>
-                    </TouchableOpacity>
+                {/* Products Title */}
+                <View style={{ paddingHorizontal: 20, marginTop: 24, marginBottom: 0, borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingBottom: 16 }}>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#111827' }}>Produk Toko</Text>
                 </View>
 
                 {/* Content */}
-                <View style={styles.productsSection}>
-                    {activeTab === 'products' ? (
-                        loading ? (
-                            <ActivityIndicator style={{ marginTop: 20 }} color={COLORS.primary} />
-                        ) : products.length === 0 ? (
-                            <View style={{ padding: 20, alignItems: 'center' }}>
-                                <Text style={{ color: '#9ca3af' }}>Belum ada produk di etalase</Text>
-                            </View>
-                        ) : (
-                            <View style={styles.productGrid}>
-                                {products.map((item) => (
-                                    <View key={item.id} style={styles.productCardWrapper}>
-                                        <TouchableOpacity
-                                            style={styles.productCard}
-                                            activeOpacity={0.9}
-                                            onPress={() => navigation.push('ProductDetail', { product: item })}
-                                        >
-                                            <Image
-                                                source={{ uri: item.images && item.images.length > 0 ? item.images[0] : 'https://via.placeholder.com/150' }}
-                                                style={styles.productImage}
-                                                resizeMode="cover"
-                                            />
-                                            <View style={styles.productInfo}>
-                                                <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-                                                <Text style={styles.productPrice}>{formatPrice(item.price)}</Text>
-                                                <View style={styles.productMeta}>
-                                                    <View style={styles.ratingRow}>
-                                                        <Ionicons name="star" size={12} color="#f59e0b" />
-                                                        <Text style={styles.ratingValue}>{item.rating || '4.0'}</Text>
-                                                    </View>
-                                                    <Text style={styles.soldValue}>{item.sold || '0'} Terjual</Text>
-                                                </View>
-                                            </View>
-                                        </TouchableOpacity>
-                                    </View>
-                                ))}
-                            </View>
-                        )
+                <View style={styles.contentArea}>
+                    {loading ? (
+                        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+                    ) : products.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <Ionicons name="cube-outline" size={48} color="#d1d5db" />
+                            <Text style={styles.emptyText}>Belum ada produk</Text>
+                        </View>
                     ) : (
-                        renderReviews()
+                        <View style={styles.grid}>
+                            {products.map((item) => (
+                                <TouchableOpacity
+                                    key={item.id}
+                                    style={styles.card}
+                                    activeOpacity={0.9}
+                                    onPress={() => navigation.push('ProductDetail', { product: item })}
+                                >
+                                    <Image
+                                        source={{ uri: item.images && item.images.length > 0 ? item.images[0] : 'https://via.placeholder.com/150' }}
+                                        style={styles.cardImg}
+                                        resizeMode="cover"
+                                    />
+                                    <View style={styles.cardBody}>
+                                        <Text style={styles.cardTitle} numberOfLines={2}>{item.name}</Text>
+                                        <Text style={styles.cardPrice}>{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(item.price)}</Text>
+                                        <View style={styles.cardFooter}>
+                                            <View style={styles.ratingBadge}>
+                                                <Ionicons name="star" size={10} color="#fbbf24" />
+                                                <Text style={styles.ratingText}>{item.rating || 'N/A'}</Text>
+                                            </View>
+                                            <Text style={styles.soldText}>{item.sold || item.totalSold || 0} Terjual</Text>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     )}
                 </View>
             </ScrollView>
@@ -315,56 +275,78 @@ const SellerProfileScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#faf5f0',
-        ...(Platform.OS === 'web' ? { flex: 0, height: 'auto', minHeight: '100vh' } : {})
+        backgroundColor: '#f8fafc',
     },
-    headerWhite: {
-        backgroundColor: '#fff',
+    customHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
+        alignItems: 'center',
         paddingHorizontal: 20,
-        paddingBottom: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f3f4f6',
-        ...SHADOWS.small,
-        zIndex: 10,
+        paddingBottom: 10,
+        paddingTop: 10,
     },
-    backButtonSimple: {
-        padding: 5,
-    },
-    headerTitle: {
+    headerTitleWhite: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#111827',
+        color: '#fff',
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
     },
-    profileSection: {
-        padding: 20,
+    headerBtn: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        borderRadius: 20,
+    },
+    banner: {
+        height: 220,
+        width: '100%',
+        position: 'relative',
+    },
+    bannerOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.1)',
+    },
+    profileContainer: {
+        paddingHorizontal: 16,
+        marginTop: -80,
     },
     profileCard: {
         backgroundColor: '#fff',
-        borderRadius: 16,
+        borderRadius: 20,
         padding: 20,
+        ...SHADOWS.medium,
+        elevation: 5,
+    },
+    topProfileRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        ...SHADOWS.medium,
     },
-    avatarContainer: {
+    avatarMain: {
         width: 70,
         height: 70,
         borderRadius: 35,
         backgroundColor: '#fef3c7',
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
-        position: 'relative',
+        borderWidth: 3,
+        borderColor: '#fff',
+        position: 'relative'
     },
     avatarText: {
         fontSize: 28,
         fontWeight: 'bold',
         color: '#b45309',
     },
-    onlineStatus: {
+    onlineIndicator: {
         position: 'absolute',
         bottom: 2,
         right: 2,
@@ -375,135 +357,251 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#fff',
     },
-    profileInfo: {
+    detailsCol: {
+        marginLeft: 16,
         flex: 1,
     },
-    shopName: {
+    sellerName: {
         fontSize: 20,
         fontWeight: 'bold',
         color: '#111827',
-        marginBottom: 4,
+        marginBottom: 6,
     },
-    locationRow: {
+    locationBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
+        backgroundColor: 'rgba(107, 114, 128, 0.8)',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 12,
+        alignSelf: 'flex-start',
+        marginBottom: 6,
+        gap: 4
     },
-    locationText: {
-        fontSize: 14,
-        color: '#6b7280',
-        marginLeft: 4,
+    locationBadgeText: {
+        fontSize: 12,
+        color: '#fff',
+        fontWeight: '500',
+    },
+    verifiedRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    verifiedText: {
+        fontSize: 12,
+        color: '#10b981',
+        fontWeight: '600',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#f3f4f6',
+        marginVertical: 16,
     },
     statsRow: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
-    statItem: {
-        flexDirection: 'row',
+    statBox: {
         alignItems: 'center',
+        flex: 1,
     },
-    statText: {
-        fontSize: 14,
+    statValue: {
+        fontSize: 16,
         fontWeight: 'bold',
         color: '#111827',
-        marginLeft: 4,
-        marginRight: 4,
     },
     statLabel: {
-        fontSize: 12,
+        fontSize: 11,
         color: '#6b7280',
+        marginTop: 2,
     },
-    divider: {
+    statSep: {
         width: 1,
-        height: 14,
-        backgroundColor: '#d1d5db',
-        marginHorizontal: 10,
+        height: 24,
+        backgroundColor: '#e5e7eb',
     },
     adminActions: {
         flexDirection: 'row',
-        marginTop: 15,
-        gap: 10,
+        marginTop: 20,
+        gap: 12,
     },
-    verifyButton: {
+    btnVerify: {
         flex: 1,
         backgroundColor: COLORS.primary,
-        paddingVertical: 12,
-        borderRadius: 8,
+        padding: 12,
+        borderRadius: 10,
         alignItems: 'center',
     },
-    verifyButtonText: {
-        color: '#fff',
-        fontWeight: 'bold',
-    },
-    rejectButton: {
+    btnReject: {
         flex: 1,
         backgroundColor: '#fff',
         borderWidth: 1,
         borderColor: '#ef4444',
-        paddingVertical: 12,
-        borderRadius: 8,
+        padding: 12,
+        borderRadius: 10,
         alignItems: 'center',
     },
-    rejectButtonText: {
+    btnTextWhite: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    btnTextRed: {
         color: '#ef4444',
         fontWeight: 'bold',
     },
-    productsSection: {
+    tabsContainer: {
+        flexDirection: 'row',
+        marginTop: 24,
         paddingHorizontal: 20,
-        paddingBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e5e7eb',
     },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#111827',
-        marginBottom: 15,
+    tabBtn: {
+        marginRight: 24,
+        paddingBottom: 12,
+        position: 'relative',
     },
-    productGrid: {
+    tabBtnActive: {
+        // active styling managed by indicator
+    },
+    tabText: {
+        fontSize: 15,
+        color: '#6b7280',
+        fontWeight: '500',
+    },
+    tabTextActive: {
+        color: '#964b00',
+        fontWeight: '700',
+    },
+    tabIndicator: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 3,
+        backgroundColor: '#964b00',
+        borderTopLeftRadius: 3,
+        borderTopRightRadius: 3,
+    },
+    contentArea: {
+        paddingTop: 20,
+        paddingHorizontal: 16,
+    },
+    grid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginHorizontal: -8,
+        gap: 12,
     },
-    productCardWrapper: {
-        width: COLUMN_WIDTH,
-        paddingHorizontal: 8,
-        marginBottom: 16,
-    },
-    productCard: {
+    card: {
+        width: (width - 32 - 12) / 2,
         backgroundColor: '#fff',
         borderRadius: 12,
+        marginBottom: 12,
         overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#f3f4f6',
         ...SHADOWS.small,
     },
-    productImage: {
+    cardImg: {
         width: '100%',
-        height: 150,
+        height: 140,
         backgroundColor: '#f3f4f6',
     },
-    productInfo: {
-        padding: 12,
+    cardBody: {
+        padding: 10,
     },
-    productName: {
-        fontSize: 14,
-        fontWeight: '600',
+    cardTitle: {
+        fontSize: 13,
+        fontWeight: '500',
         color: '#111827',
-        marginBottom: 4,
-        height: 40,
+        marginBottom: 6,
+        height: 36,
     },
-    productPrice: {
+    cardPrice: {
         fontSize: 14,
         fontWeight: 'bold',
+        color: '#964b00',
+        marginBottom: 8,
+    },
+    cardFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    ratingBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
+        backgroundColor: '#fef3c7',
+        paddingHorizontal: 4,
+        paddingVertical: 1,
+        borderRadius: 4,
+    },
+    ratingText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#b45309',
+    },
+    soldText: {
+        fontSize: 10,
+        color: '#9ca3af',
+    },
+    emptyState: {
+        alignItems: 'center',
+        paddingVertical: 50,
+    },
+    emptyText: {
+        marginTop: 12,
+        color: '#9ca3af',
+        fontSize: 16,
+    },
+    reviewCard: {
+        marginBottom: 16,
+        padding: 16,
+        backgroundColor: '#fff',
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#86efac',
+        borderColor: '#f3f4f6',
     },
-    rejectText: {
-        color: '#b91c1c',
-        fontWeight: '600',
-        fontSize: 15,
+    reviewHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
     },
-    verifyText: {
-        color: '#15803d',
+    reviewerInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    reviewerAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#f3f4f6',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    reviewerInitial: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#6b7280',
+    },
+    reviewerName: {
+        fontSize: 14,
         fontWeight: '600',
-        fontSize: 15,
+        color: '#374151',
+    },
+    reviewDate: {
+        fontSize: 12,
+        color: '#9ca3af',
+    },
+    reviewComment: {
+        fontSize: 14,
+        color: '#4b5563',
+        lineHeight: 20,
     },
 });
 

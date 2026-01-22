@@ -126,6 +126,14 @@ const confirmReceipt = asyncHandler(async (req, res) => {
     }
 
     const updatedOrder = await Order.updateStatus(id, ORDER_STATUS.COMPLETED, 'Pesanan dikonfirmasi diterima oleh pembeli');
+
+    // Update totalSold for each product
+    if (order.items && Array.isArray(order.items)) {
+        for (const item of order.items) {
+            await Product.incrementSold(item.productId, item.quantity);
+        }
+    }
+
     return success(res, updatedOrder.toJSON(), 'Pesanan berhasil dikonfirmasi');
 });
 

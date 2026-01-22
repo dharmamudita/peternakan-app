@@ -115,8 +115,6 @@ const SellerDashboardScreen = ({ navigation }) => {
     const menuItems = [
         { id: 1, title: 'Kelola Produk', subtitle: `${stats.activeProducts} produk`, icon: 'cube', gradient: ['#964b00', '#7c3f06'], route: 'MyProducts' },
         { id: 2, title: 'Pesanan Masuk', subtitle: `${stats.newOrders} pesanan baru`, icon: 'receipt', gradient: ['#7c3f06', '#5d3a1a'], badge: stats.newOrders > 0 ? stats.newOrders : null, route: 'SellerOrders' },
-        { id: 3, title: 'Ulasan', subtitle: 'Ulasan pembeli', icon: 'star', gradient: ['#964b00', '#b87333'], route: 'SellerReviews' },
-        { id: 4, title: 'Pengaturan Toko', subtitle: 'Profil toko', icon: 'settings', gradient: ['#7c3f06', '#964b00'], route: 'ShopSettings' },
     ];
 
     if (loading) {

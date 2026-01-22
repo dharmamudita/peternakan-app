@@ -59,6 +59,16 @@ const getProductBySlug = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Get product reviews
+ * GET /api/products/:id/reviews
+ */
+const getProductReviews = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10 } = req.query;
+    const reviews = await MarketplaceService.getProductReviews(req.params.id, parseInt(page), parseInt(limit));
+    return success(res, reviews, 'Ulasan produk berhasil diambil');
+});
+
+/**
  * Search products
  * GET /api/products/search
  */
@@ -349,6 +359,8 @@ module.exports = {
     getAllProducts,
     getProductById,
     getProductBySlug,
+
+    getProductReviews,
     searchProducts,
     getFeaturedProducts,
     getBestSellers,

@@ -52,6 +52,7 @@ import {
     MyProductsScreen,
     AddEditProductScreen,
     SellerOrdersScreen,
+    ReportIssuesScreen,
 } from '../screens';
 
 const Stack = createStackNavigator();
@@ -206,6 +207,7 @@ const AppNavigator = () => {
                         <Stack.Screen name="EducationManagement" component={EducationManagementScreen} />
                         <Stack.Screen name="SellerManagement" component={SellerManagementScreen} />
                         <Stack.Screen name="UserManagement" component={UserManagementScreen} />
+                        <Stack.Screen name="ReportIssues" component={ReportIssuesScreen} />
                         <Stack.Screen name="Broadcast" component={BroadcastScreen} />
                         <Stack.Screen name="Notification" component={NotificationScreen} />
                         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />

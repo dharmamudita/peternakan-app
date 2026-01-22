@@ -45,9 +45,9 @@ class User {
             farmId: this.farmId,
             isVerified: this.isVerified,
             isActive: this.isActive,
-            createdAt: this.createdAt,
-            updatedAt: this.updatedAt,
-            lastLoginAt: this.lastLoginAt,
+            createdAt: this.createdAt && typeof this.createdAt.toDate === 'function' ? this.createdAt.toDate().toISOString() : (this.createdAt instanceof Date ? this.createdAt.toISOString() : this.createdAt),
+            updatedAt: this.updatedAt && typeof this.updatedAt.toDate === 'function' ? this.updatedAt.toDate().toISOString() : (this.updatedAt instanceof Date ? this.updatedAt.toISOString() : this.updatedAt),
+            lastLoginAt: this.lastLoginAt && typeof this.lastLoginAt.toDate === 'function' ? this.lastLoginAt.toDate().toISOString() : (this.lastLoginAt instanceof Date ? this.lastLoginAt.toISOString() : this.lastLoginAt),
             sellerVerification: this.sellerVerification,
         };
     }

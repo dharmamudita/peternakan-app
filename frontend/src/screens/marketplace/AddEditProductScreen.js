@@ -37,6 +37,8 @@ const AddEditProductScreen = ({ navigation, route }) => {
         description: '',
         price: '',
         stock: '',
+        weight: '',
+        age: '',
         unit: 'ekor', // default unit
         categoryId: 'sapi',
         condition: 'new',
@@ -53,6 +55,8 @@ const AddEditProductScreen = ({ navigation, route }) => {
                 description: product.description,
                 price: product.price.toString(),
                 stock: product.stock.toString(),
+                weight: product.weight ? product.weight.toString() : '',
+                age: product.specifications?.age || '',
                 unit: product.unit || 'ekor',
                 categoryId: product.category || 'sapi',
                 condition: product.condition || 'new',
@@ -131,6 +135,10 @@ const AddEditProductScreen = ({ navigation, route }) => {
                 ...form,
                 price: parseInt(form.price),
                 stock: parseInt(form.stock),
+                weight: form.weight ? parseInt(form.weight) : 0,
+                specifications: {
+                    age: form.age
+                },
                 images: imageUrls,
                 category: form.categoryId
             };
@@ -257,6 +265,29 @@ const AddEditProductScreen = ({ navigation, route }) => {
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
+                    </View>
+
+                    {/* Weight and Age */}
+                    <View style={styles.row}>
+                        <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                            <Text style={styles.label}>Bobot (Kg)</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="0"
+                                keyboardType="numeric"
+                                value={form.weight}
+                                onChangeText={(text) => setForm({ ...form, weight: text.replace(/[^0-9]/g, '') })}
+                            />
+                        </View>
+                        <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+                            <Text style={styles.label}>Umur (Bln/Thn)</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Contoh: 2 Tahun"
+                                value={form.age}
+                                onChangeText={(text) => setForm({ ...form, age: text })}
+                            />
+                        </View>
                     </View>
                 </View>
 

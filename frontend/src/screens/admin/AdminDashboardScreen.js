@@ -141,7 +141,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                         subtitle="Feedback & pelaporan user"
                         icon="warning-outline"
                         color="#ef4444"
-                        onPress={() => showFeatureAlert('Laporan')}
+                        onPress={() => navigation.navigate('ReportIssues')}
                     />
                 </View>
 
@@ -153,7 +153,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                 <TouchableOpacity
                     style={styles.broadcastBanner}
                     activeOpacity={0.9}
-                    onPress={() => showFeatureAlert('Broadcast')}
+                    onPress={() => navigation.navigate('Broadcast')}
                 >
                     <View style={styles.broadcastContent}>
                         <Text style={styles.broadcastTitle}>Broadcast Pesan</Text>

@@ -15,4 +15,5 @@ module.exports = {
     MarketplaceService,
     EducationService,
     UploadService,
+    ReportService: require('./reportService'),
 };

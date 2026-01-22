@@ -14,6 +14,7 @@ router.get('/featured', marketplaceController.getFeaturedProducts);
 router.get('/best-sellers', marketplaceController.getBestSellers);
 router.get('/search', marketplaceController.searchProducts);
 router.get('/slug/:slug', marketplaceController.getProductBySlug);
+router.get('/:id/reviews', marketplaceController.getProductReviews);
 router.get('/:id', marketplaceController.getProductById);
 
 // Protected routes - Seller

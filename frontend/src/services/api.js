@@ -128,6 +128,7 @@ export const productApi = {
     delete: (id) => api.delete(`/products/${id}`),
     publish: (id) => api.put(`/products/${id}/publish`),
     getMyProducts: (params) => api.get('/products/seller/my', { params }),
+    getReviews: (id, params) => api.get(`/products/${id}/reviews`, { params }),
 };
 
 // Shop endpoints
@@ -237,6 +238,24 @@ export const notificationApi = {
     sendBroadcast: (data) => api.post('/notifications/broadcast', data),
     getAll: () => api.get('/notifications'),
     markAsRead: (id) => api.put(`/notifications/${id}/read`),
+};
+
+// Report endpoints
+export const reportApi = {
+    create: (data) => api.post('/reports', data),
+    getAll: () => api.get('/reports/admin/all'),
+    getMy: () => api.get('/reports/my'),
+    respond: (id, data) => api.put(`/reports/${id}/respond`, data),
+};
+
+// User Management (Admin)
+export const userApi = {
+    getAll: (params) => api.get('/auth/users', { params }),
+    getById: (id) => api.get(`/auth/users/${id}`),
+    updateRole: (id, role) => api.put(`/auth/users/${id}/role`, { role }),
+    deactivate: (id) => api.put(`/auth/users/${id}/deactivate`),
+    activate: (id) => api.put(`/auth/users/${id}/activate`),
+    delete: (id) => api.delete(`/auth/users/${id}`),
 };
 
 export default api;

@@ -44,29 +44,39 @@ const MyProductsScreen = ({ navigation }) => {
         fetchMyProducts();
     };
 
+    const performDelete = async (id) => {
+        try {
+            setLoading(true);
+            await productApi.delete(id);
+            await fetchMyProducts();
+            if (Platform.OS !== 'web') Alert.alert('Sukses', 'Produk berhasil dihapus');
+        } catch (error) {
+            console.error('Delete error:', error);
+            if (Platform.OS !== 'web') Alert.alert('Gagal', 'Gagal menghapus produk');
+            else alert('Gagal menghapus produk');
+            setLoading(false);
+        }
+    };
+
     const handleDelete = (id, name) => {
-        Alert.alert(
-            'Hapus Produk',
-            `Apakah Anda yakin ingin menghapus "${name}"?`,
-            [
-                { text: 'Batal', style: 'cancel' },
-                {
-                    text: 'Hapus',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            setLoading(true);
-                            await productApi.delete(id);
-                            fetchMyProducts(); // Refresh list
-                            Alert.alert('Sukses', 'Produk berhasil dihapus');
-                        } catch (error) {
-                            Alert.alert('Gagal', 'Gagal menghapus produk');
-                            setLoading(false);
-                        }
+        if (Platform.OS === 'web') {
+            if (window.confirm(`Apakah Anda yakin ingin menghapus "${name}"?`)) {
+                performDelete(id);
+            }
+        } else {
+            Alert.alert(
+                'Hapus Produk',
+                `Apakah Anda yakin ingin menghapus "${name}"?`,
+                [
+                    { text: 'Batal', style: 'cancel' },
+                    {
+                        text: 'Hapus',
+                        style: 'destructive',
+                        onPress: () => performDelete(id)
                     }
-                }
-            ]
-        );
+                ]
+            );
+        }
     };
 
     const formatPrice = (price) => {
