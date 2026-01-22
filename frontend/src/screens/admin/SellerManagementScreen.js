@@ -38,18 +38,10 @@ const SellerManagementScreen = ({ navigation }) => {
 
     const renderHeader = () => (
         <View style={styles.headerWrapper}>
-            <LinearGradient
-                colors={['#964b00', '#854d0e']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[
-                    styles.headerGradient,
-                    { paddingTop: insets.top + (Platform.OS === 'web' ? 20 : 0) }
-                ]}
-            >
+            <View style={[styles.headerWhite, { paddingTop: insets.top }]}>
                 <View style={styles.headerTop}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                        <Ionicons name="arrow-back" size={24} color="#1f2937" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Kelola Penjual</Text>
                     <View style={{ width: 40 }} />
@@ -71,10 +63,8 @@ const SellerManagementScreen = ({ navigation }) => {
                         </TouchableOpacity>
                     )}
                 </View>
-            </LinearGradient>
 
-            {/* Filter Tabs - Floating overlap */}
-            <View style={styles.filterContainer}>
+                {/* Filter Tabs */}
                 <View style={styles.filterTabs}>
                     {['all', 'pending', 'verified'].map((status) => (
                         <TouchableOpacity
@@ -129,7 +119,7 @@ const SellerManagementScreen = ({ navigation }) => {
     );
 
     return (
-        <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
+        <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#964b00" />
 
             {renderHeader()}
@@ -153,58 +143,46 @@ const SellerManagementScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f9fafb' },
-    webContainer: {
-        width: '100%',
-        maxWidth: 600,
-        alignSelf: 'center',
-        ...(Platform.OS === 'web' ? { minHeight: '100vh', boxShadow: '0 0 20px rgba(0,0,0,0.1)' } : {})
-    },
+
 
     // Header Styles
-    headerWrapper: { marginBottom: 10, backgroundColor: '#f9fafb' },
-    headerGradient: {
-        paddingBottom: 24,
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24
-    },
+    headerWrapper: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6', marginBottom: 10 },
+    headerWhite: { paddingBottom: 16 },
+
     headerTop: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        marginBottom: 16,
+        marginBottom: 12,
         paddingTop: 10
     },
     backButton: {
         width: 40, height: 40,
         alignItems: 'center', justifyContent: 'center',
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)'
+        backgroundColor: '#f3f4f6'
     },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+    headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
 
     searchContainer: {
         flexDirection: 'row', alignItems: 'center',
-        backgroundColor: '#fff',
-        marginHorizontal: 16, paddingHorizontal: 16, borderRadius: 16, height: 50,
-        ...SHADOWS.small
+        backgroundColor: '#f9fafb',
+        marginHorizontal: 16, paddingHorizontal: 12, borderRadius: 12, height: 46,
+        borderWidth: 1, borderColor: '#e5e7eb'
     },
-    searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1f2937' },
+    searchInput: { flex: 1, marginLeft: 10, fontSize: 14, color: '#1f2937' },
 
     filterContainer: { marginTop: -20, paddingHorizontal: 16 },
-    filterTabs: {
-        flexDirection: 'row',
-        backgroundColor: '#fff',
-        padding: 6, borderRadius: 16,
-        ...SHADOWS.small,
-        justifyContent: 'space-between'
-    },
+    filterTabs: { flexDirection: 'row', paddingHorizontal: 16, marginTop: 16, gap: 8 },
     filterTab: {
-        paddingVertical: 8, paddingHorizontal: 12,
-        borderRadius: 12, flex: 1, alignItems: 'center'
+        paddingVertical: 8, paddingHorizontal: 16,
+        borderRadius: 20, backgroundColor: '#fff',
+        borderWidth: 1, borderColor: '#e5e7eb',
+        alignItems: 'center'
     },
-    activeFilterTab: { backgroundColor: '#964b00' },
-    filterText: { fontSize: 13, color: '#6b7280', fontWeight: '600' },
+    activeFilterTab: { backgroundColor: '#964b00', borderColor: '#964b00' },
+    filterText: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
     activeFilterText: { color: '#fff' },
 
     listContainer: { padding: 16, paddingTop: 8, paddingBottom: 40 },

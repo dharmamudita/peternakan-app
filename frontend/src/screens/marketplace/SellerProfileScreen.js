@@ -90,51 +90,35 @@ const SellerProfileScreen = ({ navigation, route }) => {
     );
 
     return (
-        <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
-            <StatusBar barStyle="light-content" backgroundColor="#964b00" />
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-            {/* Header / Cover dengan Gradient */}
-            <LinearGradient
-                colors={['#964b00', '#b45309']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[
-                    styles.header,
-                    {
-                        paddingTop: insets.top + (Platform.OS === 'web' ? 20 : 0),
-                        zIndex: 1
-                    }
-                ]}
-            >
-                <View style={styles.headerContent}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
+            {/* Simple White Header */}
+            <View style={[styles.headerWhite, { paddingTop: insets.top }]}>
+                <TouchableOpacity
+                    style={styles.backButtonSimple}
+                    onPress={() => navigation.goBack()}
+                >
+                    <Ionicons name="arrow-back" size={24} color="#111827" />
+                </TouchableOpacity>
+
+                <Text style={styles.headerTitle}>Detail Toko</Text>
+
+                {!asAdmin ? (
+                    <TouchableOpacity style={styles.backButtonSimple}>
+                        <Ionicons name="search" size={24} color="#111827" />
                     </TouchableOpacity>
+                ) : (
+                    <View style={{ width: 40 }} />
+                )}
+            </View>
 
-                    {!asAdmin && (
-                        <TouchableOpacity style={styles.searchButton}>
-                            <Ionicons name="search" size={20} color="#fff" />
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                {/* Toko Background Pattern/Icon Decorative */}
-                <View style={styles.decorativeIcon}>
-                    <Ionicons name="storefront" size={120} color="rgba(255,255,255,0.05)" />
-                </View>
-            </LinearGradient>
-
-            {/* ScrollView container diberi zIndex tinggi agar kontennya (Profile Card) merender DI ATAS Header */}
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 40 }}
-                style={{ flex: 1, zIndex: 10 }}
+                style={{ flex: 1 }}
             >
-                {/* Profile Info Card - Overlap Header */}
+                {/* Profile Info Card - No Overlap */}
                 <View style={styles.profileSection}>
                     <View style={styles.profileCard}>
                         <View style={styles.avatarContainer}>
@@ -246,61 +230,42 @@ const SellerProfileScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f9fafb' },
-    webContainer: {
-        width: '100%',
-        maxWidth: 600,
-        alignSelf: 'center',
-        // Optional: add borders or shadow for "app" feel on desktop
-        ...(Platform.OS === 'web' ? { minHeight: '100vh', boxShadow: '0 0 20px rgba(0,0,0,0.1)' } : {})
-    },
 
-    header: {
-        height: 180, // Sedikit lebih tinggi untuk proporsi
-        width: '100%',
-        position: 'relative',
-        justifyContent: 'flex-start',
-    },
-    headerContent: {
+    headerWhite: {
+        backgroundColor: '#fff',
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingTop: 10, // Tambahan padding aman
-        zIndex: 10,
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f3f4f6',
+        zIndex: 10
     },
-    decorativeIcon: {
-        position: 'absolute',
-        right: -20,
-        bottom: -20,
-        opacity: 0.5,
-        transform: [{ rotate: '-15deg' }]
+    headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
+
+    backButtonSimple: {
+        width: 40, height: 40,
+        alignItems: 'center', justifyContent: 'center',
+        borderRadius: 20,
+        backgroundColor: '#f3f4f6'
     },
 
-    // Buttons
-    backButton: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        alignItems: 'center', justifyContent: 'center'
-    },
-    searchButton: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        alignItems: 'center', justifyContent: 'center'
-    },
-
-    profileSection: { paddingHorizontal: 20, marginTop: -50, zIndex: 20 },
+    profileSection: { paddingHorizontal: 20, marginTop: 20 },
     profileCard: {
         backgroundColor: '#fff', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center',
         ...SHADOWS.medium, marginBottom: 16,
         // Shadow improvement
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
         shadowRadius: 10,
-        elevation: 5,
+        elevation: 3,
+        borderWidth: 1, borderColor: '#f3f4f6'
     },
     avatarContainer: {
         width: 64, height: 64, borderRadius: 32, backgroundColor: '#fed7aa', alignItems: 'center', justifyContent: 'center', marginRight: 16,
-        position: 'relative', borderWidth: 2, borderColor: '#fff'
+        position: 'relative',
     },
     avatarText: { fontSize: 24, fontWeight: '800', color: '#9a3412' },
     onlineStatus: { position: 'absolute', bottom: 2, right: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: '#10b981', borderWidth: 2, borderColor: '#fff' },
