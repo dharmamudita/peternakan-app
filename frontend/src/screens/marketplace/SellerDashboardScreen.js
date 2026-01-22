@@ -115,10 +115,8 @@ const SellerDashboardScreen = ({ navigation }) => {
     const menuItems = [
         { id: 1, title: 'Kelola Produk', subtitle: `${stats.activeProducts} produk`, icon: 'cube', gradient: ['#964b00', '#7c3f06'], route: 'MyProducts' },
         { id: 2, title: 'Pesanan Masuk', subtitle: `${stats.newOrders} pesanan baru`, icon: 'receipt', gradient: ['#7c3f06', '#5d3a1a'], badge: stats.newOrders > 0 ? stats.newOrders : null, route: 'SellerOrders' },
-        { id: 3, title: 'Pengiriman', subtitle: `${stats.pendingShipment} menunggu`, icon: 'car', gradient: ['#b87333', '#964b00'], badge: stats.pendingShipment > 0 ? stats.pendingShipment : null, route: 'SellerShipments' },
-        { id: 4, title: 'Pendapatan', subtitle: 'Statistik penjualan', icon: 'wallet', gradient: ['#5d3a1a', '#3d2510'], route: 'SellerRevenue' },
-        { id: 5, title: 'Ulasan', subtitle: 'Ulasan pembeli', icon: 'star', gradient: ['#964b00', '#b87333'], route: 'SellerReviews' },
-        { id: 6, title: 'Pengaturan Toko', subtitle: 'Profil toko', icon: 'settings', gradient: ['#7c3f06', '#964b00'], route: 'ShopSettings' },
+        { id: 3, title: 'Ulasan', subtitle: 'Ulasan pembeli', icon: 'star', gradient: ['#964b00', '#b87333'], route: 'SellerReviews' },
+        { id: 4, title: 'Pengaturan Toko', subtitle: 'Profil toko', icon: 'settings', gradient: ['#7c3f06', '#964b00'], route: 'ShopSettings' },
     ];
 
     if (loading) {

@@ -28,6 +28,14 @@ const createOrder = asyncHandler(async (req, res) => {
         return notFound(res, 'Produk tidak ditemukan');
     }
 
+    console.log('Creating order for product:', productId);
+    console.log('Product sellerId:', product.sellerId);
+
+    // Ensure sellerId exists
+    if (!product.sellerId) {
+        return badRequest(res, 'Produk tidak memiliki penjual yang valid');
+    }
+
     // Check stock
     if (product.stock < quantity) {
         return badRequest(res, 'Stok tidak mencukupi');
@@ -41,7 +49,7 @@ const createOrder = asyncHandler(async (req, res) => {
     // Create order with PAID status (skip payment gateway for testing)
     const order = await Order.create({
         buyerId,
-        sellerId: product.sellerId,
+        sellerId: product.sellerId, // Ensure this is set correctly
         shopId: product.shopId || '',
         items: [{
             productId: product.id,
@@ -63,6 +71,8 @@ const createOrder = asyncHandler(async (req, res) => {
         buyerPhone: req.user.phoneNumber || '',
         notes: notes || '',
     });
+
+    console.log('Order created with sellerId:', order.sellerId);
 
     // Update product stock
     await Product.update(productId, {

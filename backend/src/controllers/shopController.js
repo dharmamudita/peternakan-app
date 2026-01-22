@@ -66,9 +66,22 @@ const verifyShop = asyncHandler(async (req, res) => {
     return success(res, shop.toJSON(), `Status toko berhasil diubah menjadi ${status}`);
 });
 
+// Get Shop by ID (Public)
+const getShopById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const shop = await Shop.getById(id);
+
+    if (!shop) {
+        return notFound(res, 'Toko tidak ditemukan');
+    }
+
+    return success(res, shop.toJSON(), 'Data toko berhasil diambil');
+});
+
 module.exports = {
     registerShop,
     getMyShop,
     getPendingShops,
-    verifyShop
+    verifyShop,
+    getShopById
 };

@@ -14,4 +14,7 @@ router.get('/my', authenticate, shopController.getMyShop);
 router.get('/pending', authenticate, adminOnly, shopController.getPendingShops);
 router.put('/:id/verify', authenticate, adminOnly, shopController.verifyShop);
 
+// Public Routes (Authenticated)
+router.get('/:id', authenticate, shopController.getShopById);
+
 module.exports = router;

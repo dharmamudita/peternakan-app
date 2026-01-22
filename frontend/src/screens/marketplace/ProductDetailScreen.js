@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
-import { orderApi } from '../../services/api';
+import { orderApi, shopApi } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -70,6 +70,32 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
     // State for buying
     const [isBuying, setIsBuying] = useState(false);
+
+    // Shop state
+    const [shop, setShop] = useState(null);
+    const [loadingShop, setLoadingShop] = useState(false);
+
+    useEffect(() => {
+        const fetchShop = async () => {
+            if (product?.shopId) {
+                setLoadingShop(true);
+                try {
+                    const response = await shopApi.getById(product.shopId);
+                    if (response.data) {
+                        setShop(response.data);
+                    }
+                } catch (error) {
+                    console.log('Error fetching shop:', error);
+                } finally {
+                    setLoadingShop(false);
+                }
+            }
+        };
+
+        if (product) {
+            fetchShop(); // Fetch shop details
+        }
+    }, [product]);
 
     const showAlert = (title, message) => {
         if (Platform.OS === 'web') {
@@ -200,22 +226,38 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
                         <View style={styles.divider} />
 
+
+
                         {/* Seller Info */}
-                        <TouchableOpacity style={styles.sellerSection} onPress={() => navigation.navigate('SellerProfile', { sellerId: '1', sellerData: { name: 'Toko Ternak Jaya', location: 'Blitar', rating: 4.8 } })}>
+                        {/* Seller Info */}
+                        <TouchableOpacity
+                            style={styles.sellerSection}
+                            onPress={() => navigation.navigate('SellerProfile', { sellerId: product.sellerId, sellerData: shop })}
+                            disabled={!shop} // Disable if no shop data
+                        >
                             <View style={styles.sectionHeader}>
                                 <Text style={styles.sectionTitle}>Informasi Penjual</Text>
                             </View>
                             <View style={styles.sellerRow}>
                                 <View style={styles.sellerAvatar}>
-                                    <Text style={styles.sellerInitials}>TJ</Text>
+                                    <Text style={styles.sellerInitials}>
+                                        {shop ? shop.name.substring(0, 2).toUpperCase() : (product.sellerName ? product.sellerName.substring(0, 2).toUpperCase() : 'TK')}
+                                    </Text>
                                 </View>
                                 <View style={styles.sellerInfo}>
-                                    <Text style={styles.sellerName}>Toko Ternak Jaya</Text>
+                                    <View>
+                                        <Text style={styles.sellerName}>
+                                            {loadingShop ? 'Memuat...' : (shop ? shop.name : (product.sellerName || 'Nama Toko'))}
+                                        </Text>
+                                        {shop?.status === 'VERIFIED' && <Ionicons name="checkmark-circle" size={14} color={COLORS.primary} style={{ marginLeft: 4, marginTop: 2 }} />}
+                                    </View>
                                     <View style={styles.sellerMeta}>
-                                        <View style={styles.onlineBadge} />
+                                        <View style={[styles.onlineBadge, { backgroundColor: '#10b981' }]} />
                                         <Text style={styles.sellerStatus}>Online</Text>
                                         <Text style={{ color: '#d1d5db' }}>•</Text>
-                                        <Text style={{ fontSize: 12, color: '#6b7280' }}>Blitar</Text>
+                                        <Text style={{ fontSize: 12, color: '#6b7280' }}>
+                                            {shop ? shop.address.split(',')[0] : 'Lokasi'}
+                                        </Text>
                                     </View>
                                 </View>
                                 <TouchableOpacity style={styles.chatButton}>

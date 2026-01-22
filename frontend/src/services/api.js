@@ -136,6 +136,7 @@ export const shopApi = {
     getMyShop: () => api.get('/shops/my'),
     getPending: (status) => api.get('/shops/pending', { params: { status } }),
     verify: (id, status) => api.put(`/shops/${id}/verify`, { status }),
+    getById: (id) => api.get(`/shops/${id}`),
 };
 
 // Seller Dashboard endpoints
