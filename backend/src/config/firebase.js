@@ -32,7 +32,9 @@ if (admin.apps.length === 0) {
   try {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      databaseURL: process.env.FIREBASE_DATABASE_URL
+      databaseURL: process.env.FIREBASE_DATABASE_URL,
+      // Gunakan bucket dari ENV atau default ke bucket yang diketahui valid dari frontend
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'peternakan-b3e94.firebasestorage.app'
     });
     console.log('🚀 Firebase Admin Initialized Successfully');
   } catch (error) {
@@ -43,9 +45,13 @@ if (admin.apps.length === 0) {
 
 const db = admin.firestore();
 const auth = admin.auth();
+const storage = admin.storage();
+const bucket = storage.bucket();
 
 module.exports = {
   admin,
   db,
   auth,
+  storage,
+  bucket
 };

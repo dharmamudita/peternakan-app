@@ -39,8 +39,13 @@ if (process.env.NODE_ENV === 'development') {
 
 // ==================== ROUTES ====================
 
+const path = require('path');
+
 // API routes
 app.use('/api', routes);
+
+// Serve Static Files (Fallback for Local Uploads)
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Root route
 app.get('/', (req, res) => {

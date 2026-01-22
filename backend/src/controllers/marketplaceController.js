@@ -101,7 +101,10 @@ const getBestSellers = asyncHandler(async (req, res) => {
  */
 const getMyProducts = asyncHandler(async (req, res) => {
     const { page, limit } = parsePagination(req.query);
-    const filters = { ...parseFilters(req.query, ['status']), sellerId: req.user.id };
+    // Default status to 'all' so sellers can see drafts/disabled products
+    const status = req.query.status || 'all';
+    console.log(`[DEBUG] getMyProducts for User ID: ${req.user.id}, Status: ${status}`);
+    const filters = { sellerId: req.user.id, status };
 
     const result = await MarketplaceService.getAllProducts(page, limit, filters);
 

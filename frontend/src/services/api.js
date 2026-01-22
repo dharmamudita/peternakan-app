@@ -130,6 +130,14 @@ export const productApi = {
     getMyProducts: (params) => api.get('/products/seller/my', { params }),
 };
 
+// Shop endpoints
+export const shopApi = {
+    register: (data) => api.post('/shops/register', data),
+    getMyShop: () => api.get('/shops/my'),
+    getPending: () => api.get('/shops/pending'),
+    verify: (id, status) => api.put(`/shops/${id}/verify`, { status }),
+};
+
 // Cart endpoints
 export const cartApi = {
     get: () => api.get('/cart'),

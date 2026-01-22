@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInRight, FadeInUp } from 'react-native-reanimated';
@@ -25,7 +25,7 @@ const SellerDashboardScreen = ({ navigation }) => {
     ];
 
     const menuItems = [
-        { id: 1, title: 'Kelola Produk', subtitle: 'Tambah, edit produk', icon: 'cube', gradient: ['#964b00', '#7c3f06'] },
+        { id: 1, title: 'Kelola Produk', subtitle: 'Tambah, edit produk', icon: 'cube', gradient: ['#964b00', '#7c3f06'], route: 'MyProducts' },
         { id: 2, title: 'Pesanan Masuk', subtitle: '5 pesanan baru', icon: 'receipt', gradient: ['#7c3f06', '#5d3a1a'], badge: 5 },
         { id: 3, title: 'Pengiriman', subtitle: '3 menunggu', icon: 'car', gradient: ['#b87333', '#964b00'], badge: 3 },
         { id: 4, title: 'Pendapatan', subtitle: 'Statistik penjualan', icon: 'wallet', gradient: ['#5d3a1a', '#3d2510'] },
@@ -41,6 +41,96 @@ const SellerDashboardScreen = ({ navigation }) => {
 
     const formatPrice = (price) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
 
+    const [shop, setShop] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchShopStatus = async () => {
+            try {
+                const response = await import('../../services/api').then(module => module.shopApi.getMyShop());
+                if (response.data) {
+                    setShop(response.data);
+                } else {
+                    setShop(null); // Belum ada toko
+                }
+            } catch (error) {
+                console.log('Error fetching shop:', error);
+                setShop(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const unsubscribe = navigation.addListener('focus', fetchShopStatus);
+        return unsubscribe;
+    }, [navigation]);
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+            </View>
+        );
+    }
+
+    // 1. Belum punya toko -> Redirect ke Registrasi
+    if (!shop) {
+        return (
+            <View style={[styles.container, { paddingTop: insets.top + 60, paddingHorizontal: 20, alignItems: 'center' }]}>
+                <Ionicons name="storefront-outline" size={100} color={COLORS.primary} />
+                <Text style={{ fontSize: 24, fontWeight: 'bold', marginTop: 20, marginBottom: 10 }}>Belum Ada Toko</Text>
+                <Text style={{ textAlign: 'center', color: '#666', marginBottom: 30 }}>
+                    Anda harus mendaftarkan toko terlebih dahulu untuk mulai berjualan.
+                </Text>
+                <TouchableOpacity
+                    style={{ backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 30, borderRadius: 8 }}
+                    onPress={() => navigation.navigate('SellerRegistration')}
+                >
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Daftar Toko Sekarang</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    // 2. Status Pending -> Menunggu Verifikasi
+    if (shop.status === 'PENDING') {
+        return (
+            <View style={[styles.container, { paddingTop: insets.top + 60, paddingHorizontal: 20, alignItems: 'center' }]}>
+                <Ionicons name="time-outline" size={100} color="#f59e0b" />
+                <Text style={{ fontSize: 24, fontWeight: 'bold', marginTop: 20, marginBottom: 10 }}>Menunggu Verifikasi</Text>
+                <Text style={{ textAlign: 'center', color: '#666', marginBottom: 30 }}>
+                    Pengajuan toko Anda sedang ditinjau oleh Admin. Mohon tunggu 1x24 jam.
+                </Text>
+                <TouchableOpacity
+                    style={{ backgroundColor: '#f3f4f6', paddingVertical: 12, paddingHorizontal: 30, borderRadius: 8 }}
+                    onPress={() => navigation.goBack()}
+                >
+                    <Text style={{ color: '#374151', fontWeight: 'bold' }}>Kembali</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    // 3. Status Rejected
+    if (shop.status === 'REJECTED') {
+        return (
+            <View style={[styles.container, { paddingTop: insets.top + 60, paddingHorizontal: 20, alignItems: 'center' }]}>
+                <Ionicons name="close-circle-outline" size={100} color={COLORS.error} />
+                <Text style={{ fontSize: 24, fontWeight: 'bold', marginTop: 20, marginBottom: 10 }}>Pengajuan Ditolak</Text>
+                <Text style={{ textAlign: 'center', color: '#666', marginBottom: 30 }}>
+                    Maaf, pengajuan toko Anda ditolak. Silakan hubungi admin untuk info lebih lanjut.
+                </Text>
+                <TouchableOpacity
+                    style={{ backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 30, borderRadius: 8 }}
+                    onPress={() => navigation.navigate('SellerRegistration')}
+                >
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Ajukan Ulang</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    // 4. Status VERIFIED -> Show Dashboard (Lanjut ke return di bawah)
     const getStatusColor = (status) => {
         const colors = { 'Baru': '#964b00', 'Dikemas': '#7c3f06', 'Dikirim': '#b87333', 'Selesai': '#5d3a1a' };
         return colors[status] || '#6b7280';
@@ -103,7 +193,11 @@ const SellerDashboardScreen = ({ navigation }) => {
                     <View style={styles.menuGrid}>
                         {menuItems.map((item, index) => (
                             <Animated.View key={item.id} entering={FadeInUp.delay(index * 60).duration(400)} style={styles.menuItemWrapper}>
-                                <TouchableOpacity style={styles.menuItem} onPress={() => alert(item.title + ' akan segera hadir!')} activeOpacity={0.9}>
+                                <TouchableOpacity
+                                    style={styles.menuItem}
+                                    onPress={() => item.route ? navigation.navigate(item.route) : alert(item.title + ' akan segera hadir!')}
+                                    activeOpacity={0.9}
+                                >
                                     <LinearGradient colors={item.gradient} style={styles.menuIconGradient}>
                                         <Ionicons name={item.icon} size={24} color="#ffffff" />
                                         {item.badge && (
@@ -157,7 +251,11 @@ const SellerDashboardScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#ffffff' },
+    container: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+        ...(Platform.OS === 'web' ? { flex: 0, height: 'auto', minHeight: '100vh' } : {})
+    },
     header: { paddingHorizontal: SIZES.padding, paddingTop: 8, paddingBottom: 16 },
     headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#faf8f5', alignItems: 'center', justifyContent: 'center', ...SHADOWS.small },

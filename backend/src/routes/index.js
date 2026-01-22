@@ -61,5 +61,6 @@ router.use('/materials', materialRoutes);
 router.use('/education', educationRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/shops', require('./shopRoutes'));
 
 module.exports = router;

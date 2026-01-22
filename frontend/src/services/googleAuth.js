@@ -27,6 +27,7 @@ export const useGoogleAuth = () => {
         scheme: 'peternakan-app',
         preferLocalhost: Platform.OS === 'web',
     });
+    console.log('Google Auth Redirect URI:', redirectUri);
 
     const [request, response, promptAsync] = Google.useAuthRequest({
         expoClientId: EXPO_CLIENT_ID,

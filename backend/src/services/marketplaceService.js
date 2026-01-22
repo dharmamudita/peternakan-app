@@ -26,7 +26,7 @@ class MarketplaceService {
             const product = await Product.create({
                 ...productData,
                 sellerId,
-                status: PRODUCT_STATUS.DRAFT,
+                status: PRODUCT_STATUS.ACTIVE,
             });
 
             return product;

@@ -12,8 +12,10 @@ export * from './farm';
 export * from './marketplace';
 export * from './education';
 export * from './profile';
+// Admin Screens
 export { default as AdminDashboardScreen } from './admin/AdminDashboardScreen';
 export { default as EducationManagementScreen } from './admin/EducationManagementScreen';
+export { default as UserManagementScreen } from './admin/UserManagementScreen';
 export { default as BroadcastScreen } from './admin/BroadcastScreen';
 export { default as SellerManagementScreen } from './admin/SellerManagementScreen';
 export { default as NotificationScreen } from './notification/NotificationScreen';

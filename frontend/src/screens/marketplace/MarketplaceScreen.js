@@ -1,9 +1,9 @@
 /**
  * Marketplace Screen
- * Halaman jual beli untuk pembeli (tanpa tombol jual)
+ * Halaman jual beli untuk pembeli
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,28 +12,74 @@ import {
     TouchableOpacity,
     Dimensions,
     TextInput,
+    Image,
+    Platform,
+    ActivityIndicator,
+    RefreshControl
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInUp, FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+import { productApi } from '../../services/api';
 
 const { width } = Dimensions.get('window');
-const COLUMN_WIDTH = (width - SIZES.padding * 2 - 12) / 2;
+// Responsive column width calculation
+const COLUMN_WIDTH = width > 768
+    ? (width - SIZES.padding * 2 - 24) / 4 // Desktop: 4 columns
+    : (width - SIZES.padding * 2 - 12) / 2; // Mobile: 2 columns
 
 const MarketplaceScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Semua');
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
     const categories = [
         { id: 'Semua', icon: 'apps' },
-        { id: 'Hewan', icon: 'paw' },
-        { id: 'Pakan', icon: 'leaf' },
-        { id: 'Obat', icon: 'medkit' },
-        { id: 'Peralatan', icon: 'construct' },
+        { id: 'sapi', label: 'Sapi', icon: 'paw' },
+        { id: 'kambing', label: 'Kambing', icon: 'paw' },
+        { id: 'ayam', label: 'Ayam', icon: 'egg' },
+        { id: 'pakan', label: 'Pakan', icon: 'leaf' },
+        { id: 'obat', label: 'Obat', icon: 'medkit' },
+        { id: 'alat', label: 'Alat', icon: 'construct' },
     ];
+
+    const fetchProducts = async () => {
+        try {
+            // Fetch all products (active)
+            const response = await productApi.getAll({ status: 'active', limit: 100 });
+            let productsData = [];
+            if (response.data && Array.isArray(response.data)) {
+                productsData = response.data;
+            } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+                productsData = response.data.data;
+            } else if (Array.isArray(response)) {
+                productsData = response;
+            }
+            setProducts(productsData);
+        } catch (error) {
+            console.error('Fetch products error:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchProducts();
+        }, [])
+    );
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchProducts();
+    };
 
     const banners = [
         {
@@ -52,49 +98,6 @@ const MarketplaceScreen = ({ navigation }) => {
         },
     ];
 
-    const products = [
-        {
-            id: '1',
-            name: 'Sapi Limosin Dewasa',
-            price: 25000000,
-            category: 'Hewan',
-            location: 'Blitar, Jatim',
-            rating: 4.8,
-            sold: 12,
-            isNew: true,
-        },
-        {
-            id: '2',
-            name: 'Pakan Konsentrat Comfeed',
-            price: 350000,
-            category: 'Pakan',
-            location: 'Sidoarjo, Jatim',
-            rating: 4.9,
-            sold: 154,
-            isNew: false,
-        },
-        {
-            id: '3',
-            name: 'Vitamin Ternak Organik',
-            price: 75000,
-            category: 'Obat',
-            location: 'Malang, Jatim',
-            rating: 4.7,
-            sold: 89,
-            isNew: true,
-        },
-        {
-            id: '4',
-            name: 'Mesin Chopper Rumput',
-            price: 3500000,
-            category: 'Peralatan',
-            location: 'Kediri, Jatim',
-            rating: 5.0,
-            sold: 5,
-            isNew: false,
-        },
-    ];
-
     const formatPrice = (price) => {
         return new Intl.NumberFormat('id-ID', {
             style: 'currency',
@@ -104,25 +107,24 @@ const MarketplaceScreen = ({ navigation }) => {
     };
 
     const getCategoryColor = (category) => {
-        const colors = {
-            'Hewan': '#964b00',
-            'Pakan': '#7c3f06',
-            'Obat': '#b87333',
-            'Peralatan': '#5d3a1a',
-        };
-        return colors[category] || COLORS.primary;
+        // Simple hashing color or predefined
+        return COLORS.primary;
     };
 
+    // Client-side filtering
     const filteredProducts = products.filter(product => {
         const matchesCategory = selectedCategory === 'Semua' || product.category === selectedCategory;
-        const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase()) ||
-            product.location.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
         return matchesCategory && matchesSearch;
     });
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.container}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100, paddingTop: insets.top }}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
                 {/* Header */}
                 <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
                     <View style={styles.headerTop}>
@@ -134,11 +136,15 @@ const MarketplaceScreen = ({ navigation }) => {
                             <TouchableOpacity style={styles.iconButton}>
                                 <Ionicons name="heart-outline" size={22} color="#374151" />
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
+                            <TouchableOpacity
+                                style={styles.iconButton}
+                                onPress={() => navigation.navigate('Cart')}
+                            >
                                 <Ionicons name="cart-outline" size={22} color="#374151" />
-                                <View style={styles.cartBadge}>
+                                {/* TODO: Cart Count Integration */}
+                                {/* <View style={styles.cartBadge}>
                                     <Text style={styles.badgeText}>2</Text>
-                                </View>
+                                </View> */}
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -150,14 +156,11 @@ const MarketplaceScreen = ({ navigation }) => {
                         <Ionicons name="search" size={20} color="#9ca3af" />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Cari produk, hewan, pakan..."
+                            placeholder="Cari hewan, pakan, atau alat..."
                             placeholderTextColor="#9ca3af"
                             value={search}
                             onChangeText={setSearch}
                         />
-                        <TouchableOpacity style={styles.filterButton}>
-                            <Ionicons name="options-outline" size={20} color="#374151" />
-                        </TouchableOpacity>
                     </View>
                 </Animated.View>
 
@@ -168,153 +171,145 @@ const MarketplaceScreen = ({ navigation }) => {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.categoriesContainer}
                     >
-                        {categories.map((category, index) => (
+                        {categories.map((item, index) => (
                             <TouchableOpacity
-                                key={category.id}
+                                key={item.id}
                                 style={[
                                     styles.categoryItem,
-                                    selectedCategory === category.id && styles.categoryItemActive
+                                    selectedCategory === item.id && styles.categoryItemActive,
                                 ]}
-                                onPress={() => setSelectedCategory(category.id)}
+                                onPress={() => setSelectedCategory(item.id)}
                             >
                                 <Ionicons
-                                    name={category.icon}
+                                    name={item.icon}
                                     size={18}
-                                    color={selectedCategory === category.id ? '#ffffff' : '#6b7280'}
+                                    color={selectedCategory === item.id ? '#ffffff' : '#6b7280'}
                                 />
-                                <Text style={[
-                                    styles.categoryText,
-                                    selectedCategory === category.id && styles.categoryTextActive
-                                ]}>{category.id}</Text>
+                                <Text
+                                    style={[
+                                        styles.categoryText,
+                                        selectedCategory === item.id && styles.categoryTextActive,
+                                    ]}
+                                >
+                                    {item.label || item.id}
+                                </Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
                 </Animated.View>
 
-                {/* Promo Banners */}
-                <Animated.View entering={FadeInDown.duration(400).delay(300)}>
+                {/* Banners */}
+                <Animated.View entering={FadeInRight.duration(500).delay(300)}>
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.bannerContainer}
+                        snapToInterval={width - 40}
+                        decelerationRate="fast"
                     >
-                        {banners.map((banner, index) => (
-                            <Animated.View
-                                key={banner.id}
-                                entering={FadeInRight.delay(index * 100).duration(400)}
-                            >
-                                <TouchableOpacity activeOpacity={0.9}>
-                                    <LinearGradient
-                                        colors={banner.gradient}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                        style={styles.banner}
-                                    >
-                                        <View style={styles.bannerDecor1} />
-                                        <View style={styles.bannerDecor2} />
-                                        <View style={styles.bannerContent}>
-                                            <Text style={styles.bannerTitle}>{banner.title}</Text>
-                                            <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
-                                            <View style={styles.bannerButton}>
-                                                <Text style={styles.bannerButtonText}>Lihat</Text>
-                                                <Ionicons name="arrow-forward" size={14} color="#ffffff" />
-                                            </View>
+                        {banners.map((item) => (
+                            <TouchableOpacity key={item.id} activeOpacity={0.9}>
+                                <LinearGradient
+                                    colors={item.gradient}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.banner}
+                                >
+                                    <View style={styles.bannerDecor1} />
+                                    <View style={styles.bannerDecor2} />
+                                    <View style={styles.bannerContent}>
+                                        <View style={styles.bannerIcon}>
+                                            <Ionicons name={item.icon} size={24} color="#ffffff" />
                                         </View>
-                                        <View style={styles.bannerIconContainer}>
-                                            <Ionicons name={banner.icon} size={60} color="rgba(255,255,255,0.15)" />
+                                        <View>
+                                            <Text style={styles.bannerTitle}>{item.title}</Text>
+                                            <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
                                         </View>
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                            </Animated.View>
+                                    </View>
+                                </LinearGradient>
+                            </TouchableOpacity>
                         ))}
                     </ScrollView>
                 </Animated.View>
 
-                {/* Section Header */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Produk Terbaru</Text>
-                    <TouchableOpacity>
-                        <Text style={styles.seeAll}>Lihat Semua</Text>
-                    </TouchableOpacity>
-                </View>
-
                 {/* Products Grid */}
-                <View style={styles.productsGrid}>
-                    {filteredProducts.map((product, index) => (
-                        <ProductCard
-                            key={product.id}
-                            product={product}
-                            index={index}
-                            formatPrice={formatPrice}
-                            getCategoryColor={getCategoryColor}
-                            onPress={() => navigation.navigate('ProductDetail', { product })}
-                        />
-                    ))}
-                </View>
+                <View style={styles.productsSection}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>
+                            {search ? 'Hasil Pencarian' : selectedCategory === 'Semua' ? 'Rekomendasi' : selectedCategory}
+                        </Text>
+                    </View>
 
-                <View style={{ height: 100 }} />
+                    {loading ? (
+                        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+                    ) : filteredProducts.length === 0 ? (
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="cube-outline" size={48} color="#d1d5db" />
+                            <Text style={styles.emptyText}>Tidak ada produk ditemukan</Text>
+                        </View>
+                    ) : (
+                        <View style={styles.productsGrid}>
+                            {filteredProducts.map((item, index) => (
+                                <Animated.View key={item.id} entering={FadeInUp.delay(index * 100).duration(500)}>
+                                    <TouchableOpacity
+                                        style={styles.productCard}
+                                        activeOpacity={0.9}
+                                        onPress={() => navigation.navigate('ProductDetail', { product: item })}
+                                    >
+                                        <View style={styles.imageContainer}>
+                                            <Image
+                                                source={{
+                                                    uri: item.images && item.images.length > 0
+                                                        ? item.images[0]
+                                                        : 'https://via.placeholder.com/300'
+                                                }}
+                                                style={styles.productImage}
+                                                resizeMode="cover"
+                                            />
+                                            {/* Dummy Rating for now */}
+                                            <View style={styles.ratingBadge}>
+                                                <Ionicons name="star" size={10} color="#fbbf24" />
+                                                <Text style={styles.ratingText}>4.8</Text>
+                                            </View>
+                                        </View>
+                                        <View style={styles.productInfo}>
+                                            <Text style={styles.productName} numberOfLines={2}>
+                                                {item.name}
+                                            </Text>
+                                            <Text style={styles.productPrice}>
+                                                {formatPrice(item.price)}
+                                            </Text>
+                                            <View style={styles.locationRow}>
+                                                <Ionicons name="location-outline" size={12} color="#9ca3af" />
+                                                {/* Fallback data because location is not in product schema yet or fetch seller */}
+                                                <Text style={styles.locationText}>Indonesia</Text>
+                                            </View>
+                                            <View style={styles.productFooter}>
+                                                <Text style={styles.soldText}>Stok: {item.stock}</Text>
+                                                <TouchableOpacity style={styles.addButton}>
+                                                    <Ionicons name="add" size={16} color="#ffffff" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            ))}
+                        </View>
+                    )}
+                </View>
             </ScrollView>
         </View>
     );
 };
 
-const ProductCard = ({ product, index, formatPrice, getCategoryColor, onPress }) => (
-    <Animated.View
-        entering={FadeInUp.delay(index * 80).duration(400)}
-        style={styles.productCardWrapper}
-    >
-        <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
-            <View style={styles.productCard}>
-                {/* Image Placeholder */}
-                <View style={styles.productImage}>
-                    <View style={styles.imagePlaceholder}>
-                        <Ionicons name="image-outline" size={32} color="#d1d5db" />
-                    </View>
-                    {product.isNew && (
-                        <View style={styles.newBadge}>
-                            <Text style={styles.newBadgeText}>Baru</Text>
-                        </View>
-                    )}
-                    <TouchableOpacity style={styles.favoriteButton}>
-                        <Ionicons name="heart-outline" size={18} color="#964b00" />
-                    </TouchableOpacity>
-                </View>
-
-                {/* Product Info */}
-                <View style={styles.productInfo}>
-                    <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(product.category) + '15' }]}>
-                        <Text style={[styles.categoryBadgeText, { color: getCategoryColor(product.category) }]}>
-                            {product.category}
-                        </Text>
-                    </View>
-                    <Text numberOfLines={2} style={styles.productName}>{product.name}</Text>
-                    <Text style={styles.productPrice}>{formatPrice(product.price)}</Text>
-
-                    <View style={styles.productMeta}>
-                        <View style={styles.locationRow}>
-                            <Ionicons name="location" size={11} color="#9ca3af" />
-                            <Text numberOfLines={1} style={styles.locationText}>{product.location}</Text>
-                        </View>
-                        <View style={styles.ratingRow}>
-                            <Ionicons name="star" size={11} color="#f59e0b" />
-                            <Text style={styles.ratingText}>{product.rating}</Text>
-                            <Text style={styles.soldText}>• {product.sold} terjual</Text>
-                        </View>
-                    </View>
-                </View>
-            </View>
-        </TouchableOpacity>
-    </Animated.View>
-);
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#ffffff',
+        ...(Platform.OS === 'web' ? { flex: 0, height: 'auto', minHeight: '100vh' } : {})
     },
     header: {
         paddingHorizontal: SIZES.padding,
-        paddingTop: 8,
         paddingBottom: 16,
     },
     headerTop: {
@@ -322,7 +317,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    headerLeft: {},
     headerSubtitle: {
         fontSize: 14,
         color: '#6b7280',
@@ -336,7 +330,7 @@ const styles = StyleSheet.create({
     },
     headerRight: {
         flexDirection: 'row',
-        gap: 8,
+        gap: 12,
     },
     iconButton: {
         width: 44,
@@ -382,16 +376,6 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 15,
         color: '#111827',
-    },
-    filterButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 12,
-        backgroundColor: '#ffffff',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
     },
     categoriesContainer: {
         paddingHorizontal: SIZES.padding,
@@ -448,16 +432,26 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        bottom: -15,
-        left: 30,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        bottom: 20,
+        left: 20,
     },
     bannerContent: {
-        flex: 1,
-        justifyContent: 'space-between',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+        height: '100%',
+    },
+    bannerIcon: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     bannerTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '800',
         color: '#ffffff',
         marginBottom: 4,
@@ -465,33 +459,14 @@ const styles = StyleSheet.create({
     bannerSubtitle: {
         fontSize: 13,
         color: 'rgba(255,255,255,0.9)',
-        width: 160,
     },
-    bannerButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        alignSelf: 'flex-start',
-    },
-    bannerButtonText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#ffffff',
-    },
-    bannerIconContainer: {
-        position: 'absolute',
-        right: 16,
-        bottom: 16,
+    productsSection: {
+        paddingHorizontal: SIZES.padding,
     },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: SIZES.padding,
         marginBottom: 16,
     },
     sectionTitle: {
@@ -499,77 +474,49 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#111827',
     },
-    seeAll: {
-        fontSize: 14,
-        color: '#964b00',
-        fontWeight: '600',
-    },
     productsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        paddingHorizontal: SIZES.padding,
         gap: 12,
     },
-    productCardWrapper: {
-        width: COLUMN_WIDTH,
-    },
     productCard: {
+        width: COLUMN_WIDTH,
         backgroundColor: '#ffffff',
-        borderRadius: 20,
-        overflow: 'hidden',
+        borderRadius: 16,
         borderWidth: 1,
         borderColor: '#f0ebe3',
+        overflow: 'hidden',
         ...SHADOWS.small,
+        marginBottom: 12,
     },
-    productImage: {
-        height: COLUMN_WIDTH - 20,
-        backgroundColor: '#faf8f5',
+    imageContainer: {
+        height: COLUMN_WIDTH,
         position: 'relative',
     },
-    imagePlaceholder: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
+    productImage: {
+        width: '100%',
+        height: '100%',
+        backgroundColor: '#f3f4f6',
     },
-    newBadge: {
+    ratingBadge: {
         position: 'absolute',
-        top: 10,
-        left: 10,
-        backgroundColor: '#964b00',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        bottom: 8,
+        left: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
         borderRadius: 8,
     },
-    newBadgeText: {
-        color: '#ffffff',
+    ratingText: {
         fontSize: 10,
         fontWeight: '700',
-    },
-    favoriteButton: {
-        position: 'absolute',
-        top: 10,
-        right: 10,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#ffffff',
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...SHADOWS.small,
+        color: '#ffffff',
     },
     productInfo: {
-        padding: 14,
-    },
-    categoryBadge: {
-        alignSelf: 'flex-start',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 6,
-        marginBottom: 8,
-    },
-    categoryBadgeText: {
-        fontSize: 10,
-        fontWeight: '600',
+        padding: 12,
     },
     productName: {
         fontSize: 14,
@@ -577,40 +524,49 @@ const styles = StyleSheet.create({
         color: '#111827',
         marginBottom: 6,
         height: 40,
-        lineHeight: 20,
     },
     productPrice: {
-        fontSize: 16,
-        fontWeight: '800',
+        fontSize: 15,
+        fontWeight: 'bold',
         color: '#964b00',
-        marginBottom: 10,
-    },
-    productMeta: {
-        gap: 4,
+        marginBottom: 8,
     },
     locationRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
+        marginBottom: 8,
     },
     locationText: {
         fontSize: 11,
         color: '#9ca3af',
-        flex: 1,
     },
-    ratingRow: {
+    productFooter: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        gap: 4,
-    },
-    ratingText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#374151',
     },
     soldText: {
         fontSize: 11,
+        color: '#6b7280',
+    },
+    addButton: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#964b00',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyContainer: {
+        width: '100%',
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        marginTop: 12,
         color: '#9ca3af',
+        fontWeight: '500',
     },
 });
 

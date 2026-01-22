@@ -25,4 +25,5 @@ module.exports = {
     Course,
     Material,
     UserProgress,
+    Shop: require('./Shop'),
 };

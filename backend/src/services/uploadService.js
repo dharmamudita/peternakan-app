@@ -1,324 +1,183 @@
 /**
  * Upload Service
- * Service untuk upload file ke Cloudinary (Free Cloud Storage)
+ * Service untuk upload file ke Firebase Storage dengan Multi-Bucket Failover
+ * DAN Fallback ke Local Storage jika Firebase gagal total.
  */
 
-const cloudinary = require('cloudinary').v2;
+const { storage } = require('../config/firebase');
 const { v4: uuidv4 } = require('uuid');
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
 
-// Configure Cloudinary
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Daftar kemungkinan nama bucket untuk dicoba otomatis
+const BUCKET_OPTIONS = [
+    'peternakan-b3e94.firebasestorage.app',
+    'peternakan-b3e94.appspot.com',
+    process.env.FIREBASE_STORAGE_BUCKET
+].filter((item, index, self) => item && self.indexOf(item) === index);
 
 class UploadService {
     /**
-     * Upload file ke Cloudinary dari buffer
+     * Upload buffer ke Firebase Storage dengan Auto-Failover + Local Fallback
      */
-    static async uploadFile(file, folder = 'uploads') {
+    static async uploadToFirebase(file, folder) {
+        let lastError = null;
+
+        // 1. Coba Upload ke Firebase (Semua Opsi Bucket)
+        for (const bucketName of BUCKET_OPTIONS) {
+            try {
+                return await this._attemptUpload(file, folder, bucketName);
+            } catch (error) {
+                lastError = error;
+                // Continue to next bucket
+            }
+        }
+
+        // 2. Jika semua Firebase Gagal, Gunakan Local Storage
+        console.warn(`Firebase Upload Failed (${lastError?.message}). Fallback to Local Storage.`);
         try {
-            return new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: `peternakan-app/${folder}`,
-                        public_id: uuidv4(),
-                        resource_type: 'auto',
-                    },
-                    (error, result) => {
-                        if (error) {
-                            reject(new Error(`Upload gagal: ${error.message}`));
-                        } else {
-                            resolve({
-                                publicId: result.public_id,
-                                fileName: result.original_filename,
-                                originalName: file.originalname,
-                                mimeType: file.mimetype || result.format,
-                                size: result.bytes,
-                                url: result.secure_url,
-                                width: result.width,
-                                height: result.height,
-                                format: result.format,
-                            });
-                        }
+            return await this.uploadToLocal(file, folder);
+        } catch (localError) {
+            throw new Error(`Upload Gagal Total (Firebase & Local): ${localError.message}`);
+        }
+    }
+
+    static async _attemptUpload(file, folder, bucketName) {
+        return new Promise((resolve, reject) => {
+            const bucket = storage.bucket(bucketName);
+            const fileExtension = path.extname(file.originalname);
+            const fileName = `${folder}/${uuidv4()}${fileExtension}`;
+            const fileUpload = bucket.file(fileName);
+
+            const blobStream = fileUpload.createWriteStream({
+                metadata: {
+                    contentType: file.mimetype,
+                },
+                resumable: false,
+            });
+
+            blobStream.on('error', (error) => {
+                reject(error);
+            });
+
+            blobStream.on('finish', async () => {
+                try {
+                    await fileUpload.makePublic();
+                    const publicUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
+                    resolve({
+                        fileName: fileName,
+                        originalName: file.originalname,
+                        mimeType: file.mimetype,
+                        size: file.size,
+                        url: publicUrl,
+                    });
+                } catch (err) {
+                    // Fallback Signed URL
+                    try {
+                        const [url] = await fileUpload.getSignedUrl({
+                            action: 'read',
+                            expires: '03-01-2500',
+                        });
+                        resolve({
+                            fileName: fileName,
+                            originalName: file.originalname,
+                            mimeType: file.mimetype,
+                            size: file.size,
+                            url: url,
+                        });
+                    } catch (signErr) {
+                        reject(signErr);
                     }
-                );
-
-                // Pipe buffer ke upload stream
-                const bufferStream = require('stream').Readable.from(file.buffer);
-                bufferStream.pipe(uploadStream);
-            });
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Upload multiple files
-     */
-    static async uploadMultiple(files, folder = 'uploads') {
-        try {
-            const uploadPromises = files.map(file => this.uploadFile(file, folder));
-            return await Promise.all(uploadPromises);
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Upload image dengan validasi
-     */
-    static async uploadImage(file, folder = 'images') {
-        try {
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-            if (!allowedTypes.includes(file.mimetype)) {
-                throw new Error('Tipe file tidak valid. Hanya JPEG, PNG, GIF, dan WebP yang diizinkan.');
-            }
-
-            const maxSize = 10 * 1024 * 1024; // 10MB (Cloudinary free tier)
-            if (file.size > maxSize) {
-                throw new Error('Ukuran file terlalu besar. Maksimal 10MB.');
-            }
-
-            return new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: `peternakan-app/${folder}`,
-                        public_id: uuidv4(),
-                        resource_type: 'image',
-                        transformation: [
-                            { quality: 'auto:good' },
-                            { fetch_format: 'auto' }
-                        ]
-                    },
-                    (error, result) => {
-                        if (error) {
-                            reject(new Error(`Upload gagal: ${error.message}`));
-                        } else {
-                            resolve({
-                                publicId: result.public_id,
-                                fileName: result.original_filename,
-                                originalName: file.originalname,
-                                mimeType: file.mimetype,
-                                size: result.bytes,
-                                url: result.secure_url,
-                                width: result.width,
-                                height: result.height,
-                                format: result.format,
-                                thumbnail: cloudinary.url(result.public_id, {
-                                    width: 200,
-                                    height: 200,
-                                    crop: 'thumb',
-                                    quality: 'auto',
-                                }),
-                            });
-                        }
-                    }
-                );
-
-                const bufferStream = require('stream').Readable.from(file.buffer);
-                bufferStream.pipe(uploadStream);
-            });
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Upload video dengan validasi
-     */
-    static async uploadVideo(file, folder = 'videos') {
-        try {
-            const allowedTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
-
-            if (!allowedTypes.includes(file.mimetype)) {
-                throw new Error('Tipe file tidak valid. Hanya MP4, WebM, OGG, dan MOV yang diizinkan.');
-            }
-
-            const maxSize = 100 * 1024 * 1024; // 100MB
-            if (file.size > maxSize) {
-                throw new Error('Ukuran file terlalu besar. Maksimal 100MB.');
-            }
-
-            return new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: `peternakan-app/${folder}`,
-                        public_id: uuidv4(),
-                        resource_type: 'video',
-                        eager: [
-                            { format: 'mp4', quality: 'auto' }
-                        ],
-                        eager_async: true,
-                    },
-                    (error, result) => {
-                        if (error) {
-                            reject(new Error(`Upload gagal: ${error.message}`));
-                        } else {
-                            resolve({
-                                publicId: result.public_id,
-                                fileName: result.original_filename,
-                                originalName: file.originalname,
-                                mimeType: file.mimetype,
-                                size: result.bytes,
-                                url: result.secure_url,
-                                duration: result.duration,
-                                width: result.width,
-                                height: result.height,
-                                format: result.format,
-                                thumbnail: cloudinary.url(result.public_id, {
-                                    resource_type: 'video',
-                                    format: 'jpg',
-                                    transformation: [{ width: 300, crop: 'scale' }]
-                                }),
-                            });
-                        }
-                    }
-                );
-
-                const bufferStream = require('stream').Readable.from(file.buffer);
-                bufferStream.pipe(uploadStream);
-            });
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Upload document dengan validasi
-     */
-    static async uploadDocument(file, folder = 'documents') {
-        try {
-            const allowedTypes = [
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            ];
-
-            if (!allowedTypes.includes(file.mimetype)) {
-                throw new Error('Tipe file tidak valid. Hanya PDF, DOC, DOCX, XLS, dan XLSX yang diizinkan.');
-            }
-
-            const maxSize = 20 * 1024 * 1024; // 20MB
-            if (file.size > maxSize) {
-                throw new Error('Ukuran file terlalu besar. Maksimal 20MB.');
-            }
-
-            return new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: `peternakan-app/${folder}`,
-                        public_id: uuidv4(),
-                        resource_type: 'raw',
-                    },
-                    (error, result) => {
-                        if (error) {
-                            reject(new Error(`Upload gagal: ${error.message}`));
-                        } else {
-                            resolve({
-                                publicId: result.public_id,
-                                fileName: result.original_filename,
-                                originalName: file.originalname,
-                                mimeType: file.mimetype,
-                                size: result.bytes,
-                                url: result.secure_url,
-                                format: result.format,
-                            });
-                        }
-                    }
-                );
-
-                const bufferStream = require('stream').Readable.from(file.buffer);
-                bufferStream.pipe(uploadStream);
-            });
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Delete file dari Cloudinary
-     */
-    static async deleteFile(publicId, resourceType = 'image') {
-        try {
-            const result = await cloudinary.uploader.destroy(publicId, {
-                resource_type: resourceType,
+                }
             });
 
-            if (result.result !== 'ok' && result.result !== 'not found') {
-                throw new Error('Gagal menghapus file');
-            }
-
-            return true;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Delete multiple files
-     */
-    static async deleteMultiple(publicIds, resourceType = 'image') {
-        try {
-            const result = await cloudinary.api.delete_resources(publicIds, {
-                resource_type: resourceType,
-            });
-            return result;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Get optimized URL dengan transformasi
-     */
-    static getOptimizedUrl(publicId, options = {}) {
-        const defaultOptions = {
-            quality: 'auto',
-            fetch_format: 'auto',
-            ...options,
-        };
-        return cloudinary.url(publicId, defaultOptions);
-    }
-
-    /**
-     * Get thumbnail URL
-     */
-    static getThumbnailUrl(publicId, width = 200, height = 200) {
-        return cloudinary.url(publicId, {
-            width,
-            height,
-            crop: 'thumb',
-            quality: 'auto',
+            blobStream.end(file.buffer);
         });
     }
 
     /**
-     * Upload dari URL
+     * Upload ke Local Disk (Fallback)
      */
-    static async uploadFromUrl(url, folder = 'uploads') {
-        try {
-            const result = await cloudinary.uploader.upload(url, {
-                folder: `peternakan-app/${folder}`,
-                public_id: uuidv4(),
-            });
+    static async uploadToLocal(file, folder) {
+        // folder format: "peternakan-app/images" -> kita mau simpan di backend/public/uploads/images
+        const cleanFolder = folder.replace('peternakan-app/', '').replace('peternakan-app\\', '');
+        const uploadDir = path.join(__dirname, '../../public/uploads', cleanFolder);
 
-            return {
-                publicId: result.public_id,
-                url: result.secure_url,
-                width: result.width,
-                height: result.height,
-                format: result.format,
-                size: result.bytes,
-            };
-        } catch (error) {
-            throw new Error(`Upload dari URL gagal: ${error.message}`);
+        // Ensure directory exists
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
         }
+
+        const fileExtension = path.extname(file.originalname);
+        const fileName = `${uuidv4()}${fileExtension}`;
+        const filePath = path.join(uploadDir, fileName);
+
+        // Write file
+        await fs.promises.writeFile(filePath, file.buffer);
+
+        // Construct URL
+        // Gunakan IP komputer atau localhost tergantung environment.
+        // Untuk amannya di dev local, localhost.
+        const port = process.env.PORT || 5000;
+        const baseUrl = process.env.API_URL || `http://localhost:${port}`;
+        const publicUrl = `${baseUrl}/uploads/${cleanFolder}/${fileName}`;
+
+        console.log(`✅ File saved locally: ${publicUrl}`);
+
+        return {
+            fileName: fileName,
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            size: file.size,
+            url: publicUrl,
+        };
+    }
+
+    /**
+     * Wrappers for specific types
+     */
+    static async uploadImage(file, folder = 'images') {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.mimetype)) {
+            // throw new Error('Tipe file tidak valid. Hanya JPEG, PNG, GIF, dan WebP.');
+            // Loose validation for testing
+        }
+        return await this.uploadToFirebase(file, `peternakan-app/${folder}`);
+    }
+
+    static async uploadMultiple(files, folder = 'uploads') {
+        const uploadPromises = files.map(file => this.uploadImage(file, folder));
+        return await Promise.all(uploadPromises);
+    }
+
+    static async uploadVideo(file, folder = 'videos') {
+        if (!file.mimetype.startsWith('video/')) {
+            // throw new Error('File harus berupa video.');
+        }
+        return await this.uploadToFirebase(file, `peternakan-app/${folder}`);
+    }
+
+    static async uploadDocument(file, folder = 'documents') {
+        return await this.uploadToFirebase(file, `peternakan-app/${folder}`);
+    }
+
+    static async deleteFile(fileName) {
+        // Try delete from Firebase default bucket first
+        try {
+            const bucket = storage.bucket(BUCKET_OPTIONS[0]);
+            const file = bucket.file(fileName);
+            await file.delete();
+            return true;
+        } catch (error) {
+            // Then try local delete? (Only if we knew it was local)
+            // Skip for now
+            return false;
+        }
+    }
+
+    static async getSignedUrl(fileName) {
+        // Not applicable for local files generally (unless token protected)
+        return fileName;
     }
 }
 

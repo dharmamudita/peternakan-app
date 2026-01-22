@@ -1,195 +1,147 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
     ScrollView,
+    TextInput,
     TouchableOpacity,
-    Dimensions,
     Alert,
+    ActivityIndicator,
+    Image,
+    Platform
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, GRADIENTS, SIZES, SHADOWS } from '../../constants/theme';
-import { Button, Input } from '../../components/common';
-import { authApi } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
-
-const { width } = Dimensions.get('window');
+import { COLORS, SHADOWS, SIZES } from '../../constants/theme';
+import { shopApi } from '../../services/api';
 
 const SellerRegistrationScreen = ({ navigation }) => {
-    const { user, checkAuth } = useAuth(); // checkAuth untuk refresh user role nanti
-    const [step, setStep] = useState(1);
-    const [password, setPassword] = useState('');
-    const [otp, setOtp] = useState('');
+    const [form, setForm] = useState({
+        name: '',
+        description: '',
+        address: '',
+        phoneNumber: '',
+        nik: '',
+    });
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
 
-    const showAlert = (title, message) => {
-        if (Platform.OS === 'web') {
-            window.alert(`${title}\n\n${message}`);
-        } else {
-            Alert.alert(title, message);
-        }
-    };
-
-    const handleRequestOtp = async () => {
-        if (!password) {
-            setError('Silakan masukkan password akun Anda untuk konfirmasi.');
+    const handleSubmit = async () => {
+        if (!form.name || !form.address || !form.phoneNumber || !form.nik) {
+            Alert.alert('Error', 'Mohon lengkapi semua data wajib (Nama, Alamat, No HP, NIK)');
             return;
         }
 
         setLoading(true);
-        setError('');
-
         try {
-            await authApi.requestSellerOtp(password);
-            showAlert('Kode Terkirim', 'Kode OTP 4 digit telah dikirim ke email Anda (Lihat Terminal Backend).');
-            setStep(2);
-        } catch (err) {
-            setError(err.message || 'Gagal memproses permintaan.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleVerifyOtp = async () => {
-        if (!otp || otp.length !== 4) {
-            setError('Masukkan 4 digit kode OTP yang benar.');
-            return;
-        }
-
-        setLoading(true);
-        setError('');
-
-        try {
-            await authApi.verifySellerOtp(otp);
-
-            // Refresh User Data (Sync Role change)
-            await checkAuth();
-
-            showAlert('Selamat!', 'Anda sekarang terdaftar sebagai Penjual.');
-
-            // Navigate ke Seller Dashboard
-            // Karena belum ada route khusus, kita replace ke Profile atau Halaman Toko nantinya
-            // Untuk sekarang reset ke MainTabs dulu, lalu idealnya Profil berubah tampilan
-            navigation.navigate('MainTabs', { screen: 'ProfileTab' });
-        } catch (err) {
-            setError(err.message || 'Verifikasi gagal. Cek kembali kode OTP Anda.');
+            await shopApi.register(form);
+            Alert.alert(
+                'Berhasil',
+                'Pendaftaran toko berhasil dikirim! Mohon tunggu verifikasi admin.',
+                [{ text: 'OK', onPress: () => navigation.goBack() }]
+            );
+        } catch (error) {
+            Alert.alert('Gagal', error.message || 'Terjadi kesalahan saat mendaftar toko');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <View style={styles.container}>
-            <LinearGradient
-                colors={GRADIENTS.light}
-                style={StyleSheet.absoluteFill}
-            />
-
-            {/* Header */}
+        <ScrollView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                >
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={COLORS.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Daftar Penjual</Text>
             </View>
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.keyboardView}
-            >
-                <ScrollView contentContainerStyle={styles.scrollContent}>
+            <View style={styles.content}>
+                <View style={styles.illustrationContainer}>
+                    <Ionicons name="storefront-outline" size={80} color={COLORS.primary} />
+                    <Text style={styles.illustrationTitle}>Data Toko</Text>
+                    <Text style={styles.illustrationText}>
+                        Lengkapi profil toko Anda untuk mulai berjualan. Data ini akan diverifikasi oleh Admin.
+                    </Text>
+                </View>
 
-                    <View style={styles.card}>
-                        <View style={styles.iconContainer}>
-                            <LinearGradient
-                                colors={GRADIENTS.primary}
-                                style={styles.iconBackground}
-                            >
-                                <Ionicons name="storefront" size={40} color={COLORS.white} />
-                            </LinearGradient>
-                        </View>
+                <View style={styles.formSection}>
+                    <Text style={styles.sectionTitle}>Informasi Toko</Text>
 
-                        <Text style={styles.title}>Mulai Berjualan!</Text>
-                        <Text style={styles.subtitle}>
-                            {step === 1
-                                ? 'Konfirmasi identitas Anda untuk mengaktifkan fitur Toko.'
-                                : 'Masukkan kode verifikasi yang telah dikirim.'}
-                        </Text>
-
-                        {error ? (
-                            <View style={styles.errorContainer}>
-                                <Ionicons name="alert-circle" size={20} color={COLORS.error} />
-                                <Text style={styles.errorText}>{error}</Text>
-                            </View>
-                        ) : null}
-
-                        {step === 1 ? (
-                            <>
-                                <View style={styles.infoRow}>
-                                    <Ionicons name="person" size={20} color={COLORS.primary} />
-                                    <Text style={styles.infoText}>{user?.email}</Text>
-                                </View>
-
-                                <Input
-                                    label="Konfirmasi Password"
-                                    value={password}
-                                    onChangeText={setPassword}
-                                    placeholder="Masukkan password akun Anda"
-                                    secureTextEntry
-                                    leftIcon={<Ionicons name="lock-closed-outline" size={20} color={COLORS.gray} />}
-                                />
-
-                                <Button
-                                    title="Kirim Kode Verifikasi"
-                                    onPress={handleRequestOtp}
-                                    loading={loading}
-                                    fullWidth
-                                    style={styles.button}
-                                />
-                            </>
-                        ) : (
-                            <>
-                                <Input
-                                    label="Kode OTP (4 Digit)"
-                                    value={otp}
-                                    onChangeText={setOtp}
-                                    placeholder="Contoh: 1234"
-                                    keyboardType="numeric"
-                                    maxLength={4}
-                                    leftIcon={<Ionicons name="key-outline" size={20} color={COLORS.gray} />}
-                                    style={{ textAlign: 'center', letterSpacing: 5, fontSize: 24, fontWeight: 'bold' }}
-                                />
-
-                                <Button
-                                    title="Verifikasi & Aktifkan Toko"
-                                    onPress={handleVerifyOtp}
-                                    loading={loading}
-                                    fullWidth
-                                    style={styles.button}
-                                />
-
-                                <TouchableOpacity
-                                    onPress={() => setStep(1)}
-                                    style={styles.resendLink}
-                                    disabled={loading}
-                                >
-                                    <Text style={styles.resendText}>Kirim Ulang Kode</Text>
-                                </TouchableOpacity>
-                            </>
-                        )}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Nama Toko <Text style={styles.required}>*</Text></Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Contoh: Peternakan Maju Jaya"
+                            value={form.name}
+                            onChangeText={(text) => setForm({ ...form, name: text })}
+                        />
                     </View>
 
-                </ScrollView>
-            </KeyboardAvoidingView>
-        </View>
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Deskripsi Singkat</Text>
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            placeholder="Jelaskan apa yang Anda jual..."
+                            multiline
+                            numberOfLines={3}
+                            value={form.description}
+                            onChangeText={(text) => setForm({ ...form, description: text })}
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Alamat Lengkap <Text style={styles.required}>*</Text></Text>
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            placeholder="Alamat lokasi peternakan/toko"
+                            multiline
+                            numberOfLines={3}
+                            value={form.address}
+                            onChangeText={(text) => setForm({ ...form, address: text })}
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Nomor WhatsApp <Text style={styles.required}>*</Text></Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="08xxxxxxxxxx"
+                            keyboardType="phone-pad"
+                            value={form.phoneNumber}
+                            onChangeText={(text) => setForm({ ...form, phoneNumber: text })}
+                        />
+                    </View>
+                </View>
+
+                <View style={styles.formSection}>
+                    <Text style={styles.sectionTitle}>Verifikasi Identitas</Text>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>NIK (KTP) <Text style={styles.required}>*</Text></Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Nomor Induk Kependudukan"
+                            keyboardType="numeric"
+                            value={form.nik}
+                            onChangeText={(text) => setForm({ ...form, nik: text.replace(/[^0-9]/g, '') })}
+                        />
+                        <Text style={styles.helperText}>Digunakan untuk validasi keamanan.</Text>
+                    </View>
+                </View>
+
+                <TouchableOpacity
+                    style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                    onPress={handleSubmit}
+                    disabled={loading}
+                >
+                    {loading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={styles.submitButtonText}>Kirim Pendaftaran</Text>
+                    )}
+                </TouchableOpacity>
+            </View>
+        </ScrollView>
     );
 };
 
@@ -201,106 +153,99 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: SIZES.padding,
+        padding: 20,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
         paddingTop: Platform.OS === 'ios' ? 60 : 40,
-        paddingBottom: 20,
     },
     backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: COLORS.white,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...SHADOWS.small,
+        marginRight: 16,
     },
     headerTitle: {
-        fontSize: SIZES.large,
-        fontWeight: '700',
+        fontSize: 18,
+        fontWeight: 'bold',
         color: COLORS.text,
-        marginLeft: 16,
     },
-    keyboardView: {
-        flex: 1,
+    content: {
+        padding: 20,
     },
-    scrollContent: {
-        flexGrow: 1,
-        padding: SIZES.padding,
-        justifyContent: 'center',
-    },
-    card: {
-        backgroundColor: COLORS.white,
-        borderRadius: SIZES.radius * 2,
-        padding: SIZES.paddingLarge,
-        ...SHADOWS.medium,
+    illustrationContainer: {
         alignItems: 'center',
+        marginBottom: 30,
+        padding: 20,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        ...SHADOWS.small,
     },
-    iconContainer: {
-        marginBottom: 24,
-    },
-    iconBackground: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...SHADOWS.large,
-    },
-    title: {
-        fontSize: SIZES.h2,
-        fontWeight: '800',
-        color: COLORS.text,
+    illustrationTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 12,
         marginBottom: 8,
-        textAlign: 'center',
-    },
-    subtitle: {
-        fontSize: SIZES.body,
-        color: COLORS.textLight,
-        textAlign: 'center',
-        marginBottom: 32,
-        paddingHorizontal: 10,
-    },
-    infoRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.primary + '10',
-        padding: 12,
-        borderRadius: SIZES.radius,
-        marginBottom: 24,
-        width: '100%',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    infoText: {
         color: COLORS.primary,
-        fontWeight: '600',
-        fontSize: SIZES.body,
     },
-    button: {
-        marginTop: 16,
+    illustrationText: {
+        textAlign: 'center',
+        color: COLORS.gray,
+        fontSize: 14,
+        lineHeight: 20,
     },
-    resendLink: {
-        marginTop: 24,
-        padding: 8,
+    formSection: {
+        marginBottom: 24,
     },
-    resendText: {
-        color: COLORS.textLight,
-        fontSize: SIZES.bodySmall,
-    },
-    errorContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.error + '10',
-        padding: 12,
-        borderRadius: SIZES.radius,
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
         marginBottom: 16,
-        width: '100%',
-        gap: 8,
+        color: COLORS.text,
     },
-    errorText: {
-        color: COLORS.error,
-        fontSize: SIZES.bodySmall,
-        flex: 1,
+    inputGroup: {
+        marginBottom: 16,
+    },
+    label: {
+        fontSize: 14,
+        marginBottom: 8,
+        color: COLORS.text,
+        fontWeight: '500',
+    },
+    required: {
+        color: 'red',
+    },
+    input: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 14,
+        color: COLORS.text,
+    },
+    textArea: {
+        height: 100,
+        textAlignVertical: 'top',
+    },
+    helperText: {
+        fontSize: 12,
+        color: COLORS.gray,
+        marginTop: 4,
+    },
+    submitButton: {
+        backgroundColor: COLORS.primary,
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginTop: 10,
+        marginBottom: 40,
+        ...SHADOWS.medium,
+    },
+    submitButtonDisabled: {
+        backgroundColor: COLORS.gray,
+    },
+    submitButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 

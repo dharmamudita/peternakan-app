@@ -5,124 +5,106 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SHADOWS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-
 const { width } = Dimensions.get('window');
 
-// --- Komponen Card Minimalis ---
-const MenuCard = ({ title, subtitle, icon, onPress, color = COLORS.primary }) => {
-    return (
-        <TouchableOpacity
-            style={styles.menuCardContainer}
-            activeOpacity={0.7}
-            onPress={onPress}
-        >
-            <View style={styles.menuCard}>
-                <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
-                    <Ionicons name={icon} size={24} color={color} />
-                </View>
-                <View style={styles.menuContent}>
-                    <Text style={styles.menuTitle}>{title}</Text>
-                    <Text style={styles.menuSubtitle}>{subtitle}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
-            </View>
-        </TouchableOpacity>
-    );
-};
-
-// --- Stat Card ---
-const StatCard = ({ label, value, icon, color }) => (
-    <View style={styles.statCardContainer}>
-        <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: color + '15' }]}>
-                <Ionicons name={icon} size={22} color={color} />
-            </View>
-            <View>
-                <Text style={[styles.statValue, { color: color }]}>{value}</Text>
-                <Text style={styles.statLabel}>{label}</Text>
-            </View>
+// --- Komponen Card Menu ---
+const MenuCard = ({ title, subtitle, icon, onPress, color = COLORS.primary }) => (
+    <TouchableOpacity style={styles.menuCard} onPress={onPress}>
+        <View style={[styles.menuIconBox, { backgroundColor: color + '20' }]}>
+            <Ionicons name={icon} size={24} color={color} />
         </View>
-    </View>
+        <View style={styles.menuInfo}>
+            <Text style={styles.menuTitle}>{title}</Text>
+            <Text style={styles.menuSubtitle}>{subtitle}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+    </TouchableOpacity>
 );
 
 const AdminDashboardScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const { user } = useAuth();
 
-    // Data dummy stats
     const stats = [
-        { label: 'Total User', value: '1.2k', icon: 'people', color: '#964b00' },
-        { label: 'Toko', value: '15', icon: 'storefront', color: '#10b981' }, // Updated values
-        { label: 'Pending', value: '2', icon: 'time', color: '#b45309' },
-        { label: 'Laporan', value: '3', icon: 'alert-circle', color: '#ef4444' },
+        { label: 'Total User', value: '1.2k', icon: 'people', color: '#3b82f6', bg: '#dbeafe' },
+        { label: 'Total Toko', value: '85', icon: 'storefront', color: '#f59e0b', bg: '#fef3c7' },
+        { label: 'Active Ads', value: '320', icon: 'campaign', color: '#10b981', bg: '#d1fae5' },
+        { label: 'Laporan', value: '3', icon: 'alert-circle', color: '#ef4444', bg: '#fee2e2' },
     ];
-
-
 
     const showFeatureAlert = (featureName) => {
         if (Platform.OS === 'web') {
             window.alert(`Fitur ${featureName} akan segera hadir!`);
         } else {
-            Alert.alert('Segera Hadir', `Fitur ${featureName} sedang dalam pengembangan.`);
+            // Removed Alert.alert for non-web platforms as per instruction
         }
     };
-
 
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#964b00" />
 
-            {/* Header Standar + Tombol Back Kiri Atas */}
-            <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+            {/* Header */}
+            <View>
                 <LinearGradient
-                    colors={['#964b00', '#7c3f06']}
+                    colors={['#964b00', '#854d0e']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={StyleSheet.absoluteFill}
-                />
-
-                {/* Baris Navigasi Atas */}
-                <View style={styles.navBar}>
-                    <TouchableOpacity
-                        onPress={() => navigation.goBack()}
-                        style={styles.backButton}
-                        activeOpacity={0.8}
-                    >
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-
-                    <Text style={styles.navTitle}>Dashboard Admin</Text>
-
-                    <View style={styles.avatarContainer}>
-                        {user?.photoURL ? (
-                            <Image source={{ uri: user.photoURL }} style={styles.avatar} />
-                        ) : (
-                            <Text style={styles.avatarText}>{user?.displayName?.charAt(0) || 'A'}</Text>
-                        )}
+                    style={[styles.headerContainer, { paddingTop: insets.top + 20 }]}
+                >
+                    <View style={styles.navBar}>
+                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                            <Ionicons name="arrow-back" size={24} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.navTitle}>Admin Dashboard</Text>
+                        <View style={styles.avatarContainer}>
+                            {user?.photoURL ? (
+                                <Image source={{ uri: user.photoURL }} style={styles.avatar} />
+                            ) : (
+                                <Text style={styles.avatarText}>{user?.displayName?.charAt(0) || 'A'}</Text>
+                            )}
+                        </View>
                     </View>
-                </View>
 
-                {/* Greeting Section */}
-                <View style={styles.greetingSection}>
-                    <Text style={styles.greeting}>Selamat Datang,</Text>
-                    <Text style={styles.username}>{user?.displayName || 'Administrator'}</Text>
-                </View>
+                    <View style={styles.greetingSection}>
+                        <Text style={styles.greeting}>Selamat Datang,</Text>
+                        <Text style={styles.username}>{user?.displayName || 'Administrator'}</Text>
+                    </View>
+                </LinearGradient>
             </View>
 
             <ScrollView
                 style={styles.content}
-                contentContainerStyle={{ paddingBottom: 50, paddingTop: 20 }}
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 40 }}
             >
-                {/* Stats Grid */}
+                {/* Stats Grid dengan Layout 2 Kolom Rapi */}
+                <View style={[styles.sectionHeaderRow, { marginTop: 24 }]}>
+                    <Text style={styles.sectionTitle}>Ringkasan</Text>
+                </View>
+
                 <View style={styles.statsGrid}>
-                    {stats.map((stat, i) => (
-                        <StatCard key={i} {...stat} />
+                    {stats.map((stat, index) => (
+                        <TouchableOpacity
+                            key={index}
+                            style={[styles.statCard, { backgroundColor: stat.bg }]}
+                            activeOpacity={0.9}
+                        >
+                            <View style={[styles.statIcon, { backgroundColor: '#fff' }]}>
+                                <Ionicons name={stat.icon} size={24} color={stat.color} />
+                            </View>
+                            <View>
+                                <Text style={styles.statValue}>{stat.value}</Text>
+                                <Text style={styles.statLabel}>{stat.label}</Text>
+                            </View>
+                        </TouchableOpacity>
                     ))}
                 </View>
 
-                {/* Section Menu */}
-                <Text style={styles.sectionTitle}>Menu Kontrol</Text>
+                {/* Section Menu Kontrol */}
+                <View>
+                    <Text style={styles.sectionTitle}>Menu Kontrol</Text>
+                </View>
 
                 <View style={styles.menuList}>
                     <MenuCard
@@ -144,12 +126,14 @@ const AdminDashboardScreen = ({ navigation }) => {
                         subtitle="Database user & perizinan"
                         icon="people-outline"
                         color="#4b5563"
-                        onPress={() => showFeatureAlert('Kelola Pengguna')}
+                        onPress={() => navigation.navigate('UserManagement')}
                     />
                 </View>
 
                 {/* Menu Lainnya */}
-                <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Menu Lainnya</Text>
+                <View>
+                    <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Menu Lainnya</Text>
+                </View>
 
                 <View style={styles.menuList}>
                     <MenuCard
@@ -162,21 +146,22 @@ const AdminDashboardScreen = ({ navigation }) => {
                 </View>
 
                 {/* Banner Broadcast */}
-                <Text style={[styles.sectionTitle, { marginTop: 10 }]}>Aksi Cepat</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Broadcast')} activeOpacity={0.8}>
-                    <LinearGradient
-                        colors={['#b87333', '#964b00']}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                        style={styles.banner}
-                    >
-                        <View>
-                            <Text style={styles.bannerTitle}>Broadcast Pesan</Text>
-                            <Text style={styles.bannerDesc}>Kirim notifikasi masal</Text>
-                        </View>
-                        <View style={styles.bannerIconBox}>
-                            <Ionicons name="megaphone" size={24} color="#964b00" />
-                        </View>
-                    </LinearGradient>
+                <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>Aksi Cepat</Text>
+                </View>
+
+                <TouchableOpacity
+                    style={styles.broadcastBanner}
+                    activeOpacity={0.9}
+                    onPress={() => showFeatureAlert('Broadcast')}
+                >
+                    <View style={styles.broadcastContent}>
+                        <Text style={styles.broadcastTitle}>Broadcast Pesan</Text>
+                        <Text style={styles.broadcastDesc}>Kirim notifikasi masal</Text>
+                    </View>
+                    <View style={styles.broadcastIcon}>
+                        <Ionicons name="megaphone" size={24} color="#964b00" />
+                    </View>
                 </TouchableOpacity>
 
             </ScrollView>
@@ -187,23 +172,21 @@ const AdminDashboardScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#faf8f5',
+        backgroundColor: '#f9fafb',
+        ...(Platform.OS === 'web' ? { flex: 0, height: 'auto', minHeight: '100vh' } : {})
     },
-    // Header
     headerContainer: {
         paddingHorizontal: 20,
-        paddingBottom: 25,
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
-        overflow: 'hidden',
+        paddingBottom: 24,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
         ...SHADOWS.medium,
     },
     navBar: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: 20,
-        marginTop: 10,
     },
     backButton: {
         width: 40,
@@ -214,8 +197,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     navTitle: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 18,
+        fontWeight: 'bold',
         color: '#fff',
     },
     avatarContainer: {
@@ -225,101 +208,156 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
         borderWidth: 2,
         borderColor: 'rgba(255,255,255,0.3)',
     },
-    avatar: { width: '100%', height: '100%', borderRadius: 20 },
-    avatarText: { fontSize: 16, fontWeight: 'bold', color: '#964b00' },
-
+    avatar: {
+        width: '100%',
+        height: '100%',
+    },
+    avatarText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#964b00',
+    },
     greetingSection: {
         paddingHorizontal: 4,
     },
-    greeting: { fontSize: 13, color: 'rgba(255,255,255,0.9)', marginBottom: 2 },
-    username: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
-
-    // Content
-    content: { flex: 1, paddingHorizontal: 20 },
-    sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, justifyContent: 'space-between' },
+    greeting: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.9)',
+        marginBottom: 4,
+    },
+    username: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#fff',
+    },
+    content: {
+        marginTop: 10,
+    },
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        marginBottom: 16,
+    },
     sectionTitle: {
-        fontSize: 16, fontWeight: 'bold', color: '#5d3a1a',
-        marginLeft: 4,
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1f2937',
+        marginLeft: 20,
+        marginBottom: 12,
+        marginTop: 20
     },
-    badgeCount: { backgroundColor: '#ef4444', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-    badgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-
-    // Stats Grid
+    // STATS GRID FIX
     statsGrid: {
-        flexDirection: 'row', flexWrap: 'wrap',
-        justifyContent: 'space-between', marginBottom: 24,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        gap: 12,
     },
-    statCardContainer: { width: '48%', marginBottom: 16 },
     statCard: {
-        padding: 16, borderRadius: 16,
-        backgroundColor: '#fff', ...SHADOWS.small,
-        flexDirection: 'row', alignItems: 'center', gap: 12,
-    },
-    statIconBox: {
-        width: 40, height: 40, borderRadius: 12,
-        alignItems: 'center', justifyContent: 'center',
-    },
-    statValue: { fontSize: 18, fontWeight: 'bold' },
-    statLabel: { fontSize: 12, color: '#6b7280' },
-
-    // Seller List Styles
-    sellerList: { gap: 12, marginBottom: 12 },
-    sellerCard: {
+        width: '48%', // Pastikan 2 kolom
         backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 12,
-        borderWidth: 1,
-        borderColor: '#f0ebe3',
+        borderRadius: 20,
+        padding: 16,
+        marginBottom: 0, // ditangani oleh gap, atau fallback
+        flexDirection: 'row', // Icon di kiri, teks di kanan (atau ganti column kalau mau centered)
+        alignItems: 'center',
+        gap: 12,
         ...SHADOWS.small,
     },
-    sellerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    sellerAvatar: {
-        width: 48, height: 48, borderRadius: 24,
-        backgroundColor: '#fed7aa',
-        alignItems: 'center', justifyContent: 'center',
+    statIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    sellerInitials: { fontSize: 20, fontWeight: 'bold', color: '#9a3412' },
-    sellerInfo: { flex: 1 },
-    sellerName: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 2 },
-    sellerMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
-    sellerText: { fontSize: 12, color: '#6b7280' },
-    dot: { fontSize: 12, color: '#d1d5db' },
-    statusBadge: {
-        width: 32, height: 32, borderRadius: 16,
-        alignItems: 'center', justifyContent: 'center',
-        borderWidth: 1,
+    statValue: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1f2937',
     },
-    statusText: { fontSize: 12, fontWeight: '600' },
-
+    statLabel: {
+        fontSize: 12,
+        color: '#6b7280',
+        marginTop: 2,
+    },
     // Menu List
-    menuList: { gap: 12, marginBottom: 24 },
-    menuCardContainer: { ...SHADOWS.small },
+    menuList: {
+        paddingHorizontal: 20,
+        gap: 12,
+        marginBottom: 20,
+    },
     menuCard: {
-        flexDirection: 'row', alignItems: 'center',
-        padding: 16, backgroundColor: '#ffffff', borderRadius: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#f3f4f6',
+        ...SHADOWS.small,
+        marginBottom: 12
     },
-    iconContainer: {
-        width: 44, height: 44, borderRadius: 12,
-        backgroundColor: '#f5f2ed',
-        alignItems: 'center', justifyContent: 'center', marginRight: 14,
+    menuIconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
     },
-    menuContent: { flex: 1 },
-    menuTitle: { fontSize: 15, fontWeight: '700', color: '#4b3621' },
-    menuSubtitle: { fontSize: 12, color: '#8d7861' },
-
-    // Banner
-    banner: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        padding: 20, borderRadius: 20, marginBottom: 30, ...SHADOWS.medium,
+    menuInfo: {
+        flex: 1,
     },
-    bannerTitle: { fontSize: 17, fontWeight: 'bold', color: '#fff', marginBottom: 2 },
-    bannerDesc: { fontSize: 13, color: 'rgba(255,255,255,0.9)' },
-    bannerIconBox: {
-        width: 44, height: 44, borderRadius: 22,
-        backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    menuTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1f2937',
+        marginBottom: 4,
+    },
+    menuSubtitle: {
+        fontSize: 13,
+        color: '#6b7280',
+    },
+    // Broadcast Banner
+    broadcastBanner: {
+        marginHorizontal: 20,
+        marginBottom: 40,
+        padding: 20,
+        backgroundColor: '#964b00',
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        ...SHADOWS.medium,
+    },
+    broadcastContent: {
+        flex: 1,
+    },
+    broadcastTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 4,
+    },
+    broadcastDesc: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.9)',
+    },
+    broadcastIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });
 

@@ -5,3 +5,5 @@ export { default as ProductDetailScreen } from './ProductDetailScreen';
 export { default as OrderHistoryScreen } from './OrderHistoryScreen';
 export { default as SellerProfileScreen } from './SellerProfileScreen';
 export { default as CartScreen } from './CartScreen';
+export { default as MyProductsScreen } from './MyProductsScreen';
+export { default as AddEditProductScreen } from './AddEditProductScreen';
