@@ -7,6 +7,7 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const Cart = require('../models/Cart');
 const User = require('../models/User');
+const Shop = require('../models/Shop');
 const { ORDER_STATUS, PRODUCT_STATUS, USER_ROLES } = require('../config/constants');
 
 class MarketplaceService {
@@ -23,9 +24,17 @@ class MarketplaceService {
                 await User.update(sellerId, { role: USER_ROLES.SELLER });
             }
 
+            // Get Shop ID
+            let shopId = '';
+            const shop = await Shop.getByUserId(sellerId);
+            if (shop) {
+                shopId = shop.id;
+            }
+
             const product = await Product.create({
                 ...productData,
                 sellerId,
+                shopId,
                 status: PRODUCT_STATUS.ACTIVE,
             });
 

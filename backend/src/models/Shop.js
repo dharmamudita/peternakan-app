@@ -101,6 +101,18 @@ class Shop {
         return snapshot.docs.map(doc => new Shop({ id: doc.id, ...doc.data() }));
     }
 
+    // Get shop by User ID
+    static async getByUserId(userId) {
+        const snapshot = await db.collection('shops')
+            .where('userId', '==', userId)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) return null;
+        const doc = snapshot.docs[0];
+        return new Shop({ id: doc.id, ...doc.data() });
+    }
+
     static async getAllByStatus(status = null) {
         let query = db.collection('shops');
 
@@ -137,6 +149,30 @@ class Shop {
 
         // Sort in memory (newest first)
         return reviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
+    // Recalculate shop rating based on sellerId
+    static async recalculateRatingBySellerId(sellerId) {
+        const snapshot = await db.collection('reviews')
+            .where('sellerId', '==', sellerId)
+            .get();
+
+        if (snapshot.empty) return;
+
+        const ratings = snapshot.docs.map(doc => Number(doc.data().rating));
+        const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+
+        // Find shop(s) with this sellerId (should be 1)
+        const shops = await db.collection('shops').where('userId', '==', sellerId).get();
+
+        const batch = db.batch();
+        shops.docs.forEach(doc => {
+            batch.update(doc.ref, {
+                rating: Number(avg.toFixed(1))
+            });
+        });
+
+        await batch.commit();
     }
 }
 

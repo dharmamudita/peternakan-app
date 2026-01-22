@@ -44,11 +44,8 @@ const ProductDetailScreen = ({ navigation, route }) => {
         ]).start();
     }, []);
 
-    // Dummy Reviews
-    const reviews = [
-        { id: '1', user: 'Budi Santoso', rating: 5, comment: 'Sapi sehat dan gemuk, mantap!', date: '2 hari lalu' },
-        { id: '2', user: 'Siti Aminah', rating: 5, comment: 'Pengiriman cepat, respon penjual baik.', date: '1 minggu lalu' }
-    ];
+    // Dummy reviews removed, now fetching from SellerProfile
+
 
     // Fallback jika tidak ada data product
     if (!product) {
@@ -77,23 +74,26 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
     useEffect(() => {
         const fetchShop = async () => {
-            if (product?.shopId) {
-                setLoadingShop(true);
-                try {
+            setLoadingShop(true);
+            try {
+                if (product?.shopId) {
                     const response = await shopApi.getById(product.shopId);
-                    if (response.data) {
-                        setShop(response.data);
-                    }
-                } catch (error) {
-                    console.log('Error fetching shop:', error);
-                } finally {
-                    setLoadingShop(false);
+                    if (response.data) setShop(response.data);
+                } else if (product?.sellerId) {
+                    // Fallback to fetch by Seller ID for older products
+                    console.log('Fetching shop by sellerId:', product.sellerId);
+                    const response = await shopApi.getByUserId(product.sellerId);
+                    if (response.data) setShop(response.data);
                 }
+            } catch (error) {
+                console.log('Error fetching shop:', error);
+            } finally {
+                setLoadingShop(false);
             }
         };
 
         if (product) {
-            fetchShop(); // Fetch shop details
+            fetchShop();
         }
     }, [product]);
 
@@ -258,7 +258,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
                                 sellerId: shop?.userId || product.sellerId,
                                 sellerData: shop
                             })}
-                            disabled={!shop} // Disable if no shop data
+                            disabled={!shop && !product.sellerId} // Disable only if absolutely no info
                         >
                             <View style={styles.sectionHeader}>
                                 <Text style={styles.sectionTitle}>Informasi Penjual</Text>
@@ -330,29 +330,35 @@ const ProductDetailScreen = ({ navigation, route }) => {
                         <View style={styles.section}>
                             <View style={styles.sectionHeader}>
                                 <Text style={styles.sectionTitle}>Ulasan Pembeli</Text>
-                                <TouchableOpacity>
-                                    <Text style={styles.seeAllText}>Lihat Semua</Text>
+                                <TouchableOpacity onPress={() => navigation.navigate('SellerProfile', {
+                                    shopId: shop?.id,
+                                    sellerId: shop?.userId || product.sellerId,
+                                    sellerData: shop
+                                })}>
+                                    <Text style={styles.seeAllText}>Lihat Ulasan Toko</Text>
                                 </TouchableOpacity>
                             </View>
-                            {reviews.map(review => (
-                                <View key={review.id} style={styles.reviewCard}>
-                                    <View style={styles.reviewHeader}>
-                                        <View style={styles.reviewUser}>
-                                            <View style={styles.reviewAvatar}>
-                                                <Text style={styles.reviewAvatarText}>{review.user.charAt(0)}</Text>
-                                            </View>
-                                            <Text style={styles.reviewName}>{review.user}</Text>
-                                        </View>
-                                        <Text style={styles.reviewDate}>{review.date}</Text>
-                                    </View>
-                                    <View style={styles.ratingRow}>
-                                        {[...Array(5)].map((_, i) => (
-                                            <Ionicons key={i} name="star" size={12} color="#f59e0b" />
-                                        ))}
-                                    </View>
-                                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                            <TouchableOpacity
+                                style={{
+                                    padding: 15,
+                                    backgroundColor: '#f9fafb',
+                                    borderRadius: 12,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between'
+                                }}
+                                onPress={() => navigation.navigate('SellerProfile', {
+                                    shopId: shop?.id,
+                                    sellerId: shop?.userId || product.sellerId,
+                                    sellerData: shop
+                                })}
+                            >
+                                <View>
+                                    <Text style={{ fontWeight: 'bold', color: '#374151' }}>Cek Reputasi Toko</Text>
+                                    <Text style={{ color: '#9ca3af', fontSize: 12, marginTop: 4 }}>Lihat komentar dan rating dari pembeli lain</Text>
                                 </View>
-                            ))}
+                                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                            </TouchableOpacity>
                         </View>
 
                     </View>

@@ -137,6 +137,7 @@ export const shopApi = {
     getPending: (status) => api.get('/shops/pending', { params: { status } }),
     verify: (id, status) => api.put(`/shops/${id}/verify`, { status }),
     getById: (id) => api.get(`/shops/${id}`),
+    getByUserId: (userId) => api.get(`/shops/user/${userId}`),
     getReviews: (id) => api.get(`/shops/${id}/reviews`),
 };
 

@@ -220,6 +220,27 @@ class Product {
     static async getBestSellers(limit = 8) {
         return (await this.getAll(1, limit, {})).data; // Placeholder logic
     }
+
+    // Recalculate product rating
+    static async recalculateRating(productId) {
+        const snapshot = await db.collection(COLLECTIONS.PRODUCTS || 'products').doc(productId).collection('reviews').get();
+        // Wait, reviews are in a top-level collection 'reviews' or subcollection?
+        // In Order.js: db.collection('reviews').add(...)
+
+        const reviewSnapshot = await db.collection('reviews')
+            .where('productId', '==', productId)
+            .get();
+
+        if (reviewSnapshot.empty) return;
+
+        const ratings = reviewSnapshot.docs.map(doc => Number(doc.data().rating));
+        const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+
+        await db.collection(COLLECTIONS.PRODUCTS || 'products').doc(productId).update({
+            rating: Number(avg.toFixed(1)),
+            totalReviews: ratings.length
+        });
+    }
 }
 
 module.exports = Product;

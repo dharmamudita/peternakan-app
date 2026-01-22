@@ -16,6 +16,7 @@ router.put('/:id/verify', authenticate, adminOnly, shopController.verifyShop);
 
 // Public Routes (Authenticated)
 router.get('/:id/reviews', authenticate, shopController.getShopReviews);
+router.get('/user/:userId', authenticate, shopController.getShopByUserId);
 router.get('/:id', authenticate, shopController.getShopById);
 
 module.exports = router;

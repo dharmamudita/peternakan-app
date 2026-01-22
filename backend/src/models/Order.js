@@ -193,6 +193,23 @@ class Order {
                 comment,
                 createdAt: new Date()
             });
+
+            // Trigger Recalculations
+            try {
+                const Product = require('./Product');
+                const Shop = require('./Shop');
+
+                if (order.items && order.items.length > 0) {
+                    const productId = order.items[0].productId;
+                    if (productId) await Product.recalculateRating(productId);
+                }
+
+                if (order.sellerId) {
+                    await Shop.recalculateRatingBySellerId(order.sellerId);
+                }
+            } catch (error) {
+                console.error('Error recalculating ratings:', error);
+            }
         }
 
         return order;
