@@ -70,6 +70,9 @@ const LoginScreen = ({ navigation }) => {
             // navigation.replace('MainTabs'); // Handled by AuthContext state change
         } catch (exchangeError) {
             console.warn('Token exchange failed, trying with direct token:', exchangeError.message);
+            // Tampilkan alert agar user tahu ada masalah (bisa jadi config Firebase salah)
+            showAlert('Peringatan Login', `Verifikasi token Google gagal (${exchangeError.message}). Mencoba masuk dengan metode alternatif...`);
+
             // Fallback: coba pakai token langsung (siapa tahu sudah ID Token)
             await login(rawToken, user);
             // navigation.replace('MainTabs'); // Handled by AuthContext state change
@@ -95,13 +98,17 @@ const LoginScreen = ({ navigation }) => {
                 }
             } catch (error) {
                 console.error('Google login error:', error);
-                setErrors({ general: error.message || 'Gagal login dengan Google' });
+                const msg = error.message || 'Gagal login dengan Google';
+                setErrors({ general: msg });
+                showAlert('Login Gagal', msg);
             } finally {
                 setGoogleLoading(false);
             }
         } else if (response?.type === 'error') {
             console.error('Google auth error:', response.error);
-            setErrors({ general: response.error?.message || 'Gagal login dengan Google' });
+            const msg = response.error?.message || 'Gagal login dengan Google';
+            setErrors({ general: msg });
+            showAlert('Login Error', msg);
         }
     };
 
