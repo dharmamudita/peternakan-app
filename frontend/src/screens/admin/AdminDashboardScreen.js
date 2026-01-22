@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, StatusBar, Alert, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 const { width } = Dimensions.get('window');
 
 // --- Komponen Card Minimalis ---
-const MenuCard = ({ title, subtitle, icon, onPress }) => {
+const MenuCard = ({ title, subtitle, icon, onPress, color = COLORS.primary }) => {
     return (
         <TouchableOpacity
             style={styles.menuCardContainer}
@@ -17,8 +17,8 @@ const MenuCard = ({ title, subtitle, icon, onPress }) => {
             onPress={onPress}
         >
             <View style={styles.menuCard}>
-                <View style={[styles.iconContainer]}>
-                    <Ionicons name={icon} size={24} color={COLORS.primary} />
+                <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
+                    <Ionicons name={icon} size={24} color={color} />
                 </View>
                 <View style={styles.menuContent}>
                     <Text style={styles.menuTitle}>{title}</Text>
@@ -49,13 +49,15 @@ const AdminDashboardScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const { user } = useAuth();
 
-    // Data dummy
+    // Data dummy stats
     const stats = [
         { label: 'Total User', value: '1.2k', icon: 'people', color: '#964b00' },
-        { label: 'Toko Baru', value: '5', icon: 'storefront', color: '#10b981' },
-        { label: 'Verifikasi', value: '12', icon: 'checkmark-circle', color: '#b45309' },
+        { label: 'Toko', value: '15', icon: 'storefront', color: '#10b981' }, // Updated values
+        { label: 'Pending', value: '2', icon: 'time', color: '#b45309' },
         { label: 'Laporan', value: '3', icon: 'alert-circle', color: '#ef4444' },
     ];
+
+
 
     const showFeatureAlert = (featureName) => {
         if (Platform.OS === 'web') {
@@ -64,6 +66,7 @@ const AdminDashboardScreen = ({ navigation }) => {
             Alert.alert('Segera Hadir', `Fitur ${featureName} sedang dalam pengembangan.`);
         }
     };
+
 
     return (
         <View style={styles.container}>
@@ -88,7 +91,7 @@ const AdminDashboardScreen = ({ navigation }) => {
                         <Ionicons name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
 
-                    <Text style={styles.navTitle}>Dashboard</Text>
+                    <Text style={styles.navTitle}>Dashboard Admin</Text>
 
                     <View style={styles.avatarContainer}>
                         {user?.photoURL ? (
@@ -101,8 +104,8 @@ const AdminDashboardScreen = ({ navigation }) => {
 
                 {/* Greeting Section */}
                 <View style={styles.greetingSection}>
-                    <Text style={styles.greeting}>Administrator</Text>
-                    <Text style={styles.username}>{user?.displayName || 'Super Admin'}</Text>
+                    <Text style={styles.greeting}>Selamat Datang,</Text>
+                    <Text style={styles.username}>{user?.displayName || 'Administrator'}</Text>
                 </View>
             </View>
 
@@ -126,30 +129,34 @@ const AdminDashboardScreen = ({ navigation }) => {
                         title="Manajemen Edukasi"
                         subtitle="Upload materi & kelola kursus"
                         icon="school-outline"
+                        color="#b87333"
                         onPress={() => navigation.navigate('EducationManagement')}
                     />
                     <MenuCard
                         title="Kelola Penjual"
-                        subtitle="Verifikasi & manajemen toko"
+                        subtitle="Verifikasi & daftar toko"
                         icon="storefront-outline"
-                        onPress={() => showFeatureAlert('Kelola Penjual')}
-                    />
-                    <MenuCard
-                        title="Verifikasi Produk"
-                        subtitle="Persetujuan produk penjual"
-                        icon="checkmark-done-circle-outline"
-                        onPress={() => showFeatureAlert('Verifikasi Produk')}
+                        color="#10b981"
+                        onPress={() => navigation.navigate('SellerManagement')}
                     />
                     <MenuCard
                         title="Kelola Pengguna"
                         subtitle="Database user & perizinan"
                         icon="people-outline"
+                        color="#4b5563"
                         onPress={() => showFeatureAlert('Kelola Pengguna')}
                     />
+                </View>
+
+                {/* Menu Lainnya */}
+                <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Menu Lainnya</Text>
+
+                <View style={styles.menuList}>
                     <MenuCard
                         title="Laporan Masalah"
                         subtitle="Feedback & pelaporan user"
                         icon="warning-outline"
+                        color="#ef4444"
                         onPress={() => showFeatureAlert('Laporan')}
                     />
                 </View>
@@ -232,10 +239,13 @@ const styles = StyleSheet.create({
 
     // Content
     content: { flex: 1, paddingHorizontal: 20 },
+    sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, justifyContent: 'space-between' },
     sectionTitle: {
         fontSize: 16, fontWeight: 'bold', color: '#5d3a1a',
-        marginBottom: 12, marginLeft: 4,
+        marginLeft: 4,
     },
+    badgeCount: { backgroundColor: '#ef4444', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+    badgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
 
     // Stats Grid
     statsGrid: {
@@ -254,6 +264,35 @@ const styles = StyleSheet.create({
     },
     statValue: { fontSize: 18, fontWeight: 'bold' },
     statLabel: { fontSize: 12, color: '#6b7280' },
+
+    // Seller List Styles
+    sellerList: { gap: 12, marginBottom: 12 },
+    sellerCard: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
+        ...SHADOWS.small,
+    },
+    sellerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    sellerAvatar: {
+        width: 48, height: 48, borderRadius: 24,
+        backgroundColor: '#fed7aa',
+        alignItems: 'center', justifyContent: 'center',
+    },
+    sellerInitials: { fontSize: 20, fontWeight: 'bold', color: '#9a3412' },
+    sellerInfo: { flex: 1 },
+    sellerName: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 2 },
+    sellerMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
+    sellerText: { fontSize: 12, color: '#6b7280' },
+    dot: { fontSize: 12, color: '#d1d5db' },
+    statusBadge: {
+        width: 32, height: 32, borderRadius: 16,
+        alignItems: 'center', justifyContent: 'center',
+        borderWidth: 1,
+    },
+    statusText: { fontSize: 12, fontWeight: '600' },
 
     // Menu List
     menuList: { gap: 12, marginBottom: 24 },

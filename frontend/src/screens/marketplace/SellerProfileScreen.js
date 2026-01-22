@@ -6,12 +6,12 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Image, Dimensions, FlatList
+    Image, Dimensions, FlatList, Platform, Alert, StatusBar
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { COLORS, SHADOWS } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -19,18 +19,24 @@ const COLUMN_WIDTH = (width - 48) / 2;
 
 const SellerProfileScreen = ({ navigation, route }) => {
     const insets = useSafeAreaInsets();
-    // const { sellerId } = route.params; // Nanti pakai ID seller
+    const { sellerId, asAdmin, sellerData } = route.params || {};
 
-    // Dummy Data Toko
-    const seller = {
+    // Dummy Data Toko (Default fallback)
+    const defaultSeller = {
         name: 'Toko Peternak Jaya',
         location: 'Blitar, Jawa Timur',
         rating: 4.8,
         joined: 'Jan 2023',
         followers: 1250,
         description: 'Menyediakan segala kebutuhan peternakan sapi dan kambing dengan kualitas terbaik. Pakan, obat, dan vitamin tersedia.',
-        online: true
+        online: true,
+        status: 'verified',
+        owner: 'Budi Santoso',
+        joinedAt: 'Jan 2023'
     };
+
+    // Merge dengan data yang dipassing dari Dashboard
+    const seller = { ...defaultSeller, ...(sellerData || {}) };
 
     // Dummy Data Produk Toko
     const sellerProducts = [
@@ -44,6 +50,24 @@ const SellerProfileScreen = ({ navigation, route }) => {
         return new Intl.NumberFormat('id-ID', {
             style: 'currency', currency: 'IDR', minimumFractionDigits: 0
         }).format(price);
+    };
+
+    const handleVerify = () => {
+        if (Platform.OS === 'web') {
+            window.alert('Toko Berhasil Diverifikasi!\nPenjual sekarang dapat mulai berjualan.');
+        } else {
+            Alert.alert('Berhasil Verifikasi', 'Toko berhasil diverifikasi. Status sekarang aktif.');
+        }
+        navigation.goBack();
+    };
+
+    const handleReject = () => {
+        if (Platform.OS === 'web') {
+            window.alert('Pengajuan Toko Ditolak.');
+        } else {
+            Alert.alert('Ditolak', 'Pengajuan verifikasi toko ditolak.');
+        }
+        navigation.goBack();
     };
 
     const renderProduct = ({ item, index }) => (
@@ -66,34 +90,55 @@ const SellerProfileScreen = ({ navigation, route }) => {
     );
 
     return (
-        <View style={styles.container}>
-            {/* Header / Cover */}
-            <View style={[styles.header, { paddingTop: insets.top }]}>
-                <Image
-                    source={{ uri: 'https://via.placeholder.com/500x200/964b00/ffffff?text=Header+Toko' }}
-                    style={styles.headerImage}
-                />
-                <View style={styles.headerOverlay} />
+        <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
+            <StatusBar barStyle="light-content" backgroundColor="#964b00" />
 
-                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={24} color="#fff" />
-                </TouchableOpacity>
+            {/* Header / Cover dengan Gradient */}
+            <LinearGradient
+                colors={['#964b00', '#b45309']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[
+                    styles.header,
+                    {
+                        paddingTop: insets.top + (Platform.OS === 'web' ? 20 : 0),
+                        zIndex: 1
+                    }
+                ]}
+            >
+                <View style={styles.headerContent}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                    </TouchableOpacity>
 
-                <TouchableOpacity style={styles.searchButton}>
-                    <Ionicons name="search" size={20} color="#fff" />
-                </TouchableOpacity>
-            </View>
+                    {!asAdmin && (
+                        <TouchableOpacity style={styles.searchButton}>
+                            <Ionicons name="search" size={20} color="#fff" />
+                        </TouchableOpacity>
+                    )}
+                </View>
 
+                {/* Toko Background Pattern/Icon Decorative */}
+                <View style={styles.decorativeIcon}>
+                    <Ionicons name="storefront" size={120} color="rgba(255,255,255,0.05)" />
+                </View>
+            </LinearGradient>
+
+            {/* ScrollView container diberi zIndex tinggi agar kontennya (Profile Card) merender DI ATAS Header */}
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 40 }}
-                style={{ flex: 1 }}
+                style={{ flex: 1, zIndex: 10 }}
             >
-                {/* Profile Info Card */}
+                {/* Profile Info Card - Overlap Header */}
                 <View style={styles.profileSection}>
                     <View style={styles.profileCard}>
                         <View style={styles.avatarContainer}>
-                            <Text style={styles.avatarText}>TP</Text>
+                            <Text style={styles.avatarText}>{seller.name.charAt(0)}</Text>
                             {seller.online && <View style={styles.onlineStatus} />}
                         </View>
                         <View style={styles.profileInfo}>
@@ -111,29 +156,81 @@ const SellerProfileScreen = ({ navigation, route }) => {
                                 <Text style={styles.statText}>{seller.followers} Pengikut</Text>
                             </View>
                         </View>
-                        <TouchableOpacity style={styles.followButton}>
-                            <Text style={styles.followButtonText}>Ikuti</Text>
-                        </TouchableOpacity>
+
+                        {!asAdmin && (
+                            <TouchableOpacity style={styles.followButton}>
+                                <Text style={styles.followButtonText}>Ikuti</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
+
+                    {/* Admin Actions Panel */}
+                    {asAdmin && (
+                        <View style={styles.adminPanel}>
+                            <View style={styles.adminHeader}>
+                                <Ionicons name="shield-checkmark" size={20} color="#b45309" />
+                                <Text style={styles.adminPanelTitle}>Verifikasi Toko</Text>
+                            </View>
+
+                            <View style={styles.adminInfoRow}>
+                                <Text style={[styles.adminLabel, { width: 100 }]}>Pemilik</Text>
+                                <Text style={styles.adminValue}>: {seller.owner || 'Tidak Diketahui'}</Text>
+                            </View>
+                            <View style={styles.adminInfoRow}>
+                                <Text style={[styles.adminLabel, { width: 100 }]}>Bergabung</Text>
+                                <Text style={styles.adminValue}>: {seller.joinedAt || 'Baru Saja'}</Text>
+                            </View>
+                            <View style={styles.adminInfoRow}>
+                                <Text style={[styles.adminLabel, { width: 100 }]}>Status</Text>
+                                <View style={[styles.statusPill, { backgroundColor: seller.status === 'verified' ? '#dcfce7' : '#fff7ed' }]}>
+                                    <Text style={[styles.statusTextPill, { color: seller.status === 'verified' ? '#166534' : '#c2410c' }]}>
+                                        {seller.status === 'verified' ? 'Terverifikasi' : 'Menunggu Verifikasi'}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.adminActions}>
+                                {seller.status !== 'verified' ? (
+                                    <>
+                                        <TouchableOpacity style={[styles.adminBtn, styles.rejectBtn]} onPress={handleReject}>
+                                            <Ionicons name="close-circle-outline" size={20} color="#ef4444" />
+                                            <Text style={[styles.adminBtnText, { color: '#ef4444' }]}>Tolak</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.adminBtn, styles.approveBtn]} onPress={handleVerify}>
+                                            <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                                            <Text style={styles.adminBtnText}>Setujui</Text>
+                                        </TouchableOpacity>
+                                    </>
+                                ) : (
+                                    <TouchableOpacity style={[styles.adminBtn, styles.suspendBtn]} onPress={handleReject}>
+                                        <Ionicons name="warning-outline" size={20} color="#fff" />
+                                        <Text style={styles.adminBtnText}>Suspend Toko</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
+                    )}
 
                     <Text style={styles.description} numberOfLines={3}>
                         {seller.description}
                     </Text>
 
-                    <View style={styles.actionButtons}>
-                        <TouchableOpacity style={styles.chatButton}>
-                            <Ionicons name="chatbubble-ellipses-outline" size={20} color="#964b00" />
-                            <Text style={styles.chatButtonText}>Chat Penjual</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.chatButton, styles.shareButton]}>
-                            <Ionicons name="share-social-outline" size={20} color="#374151" />
-                        </TouchableOpacity>
-                    </View>
+                    {!asAdmin && (
+                        <View style={styles.actionButtons}>
+                            <TouchableOpacity style={styles.chatButton}>
+                                <Ionicons name="chatbubble-ellipses-outline" size={20} color="#964b00" />
+                                <Text style={styles.chatButtonText}>Chat Penjual</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.chatButton, styles.shareButton]}>
+                                <Ionicons name="share-social-outline" size={20} color="#374151" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
 
                 {/* Products Grid */}
                 <View style={styles.productsSection}>
-                    <Text style={styles.sectionTitle}>Semua Produk</Text>
+                    <Text style={styles.sectionTitle}>Produk Toko</Text>
                     <View style={styles.gridContainer}>
                         {sellerProducts.map((item, index) => (
                             <View key={item.id} style={{ width: '48%' }}>
@@ -149,27 +246,67 @@ const SellerProfileScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f9fafb' },
+    webContainer: {
+        width: '100%',
+        maxWidth: 600,
+        alignSelf: 'center',
+        // Optional: add borders or shadow for "app" feel on desktop
+        ...(Platform.OS === 'web' ? { minHeight: '100vh', boxShadow: '0 0 20px rgba(0,0,0,0.1)' } : {})
+    },
 
-    header: { height: 160, width: '100%', position: 'relative' },
-    headerImage: { ...StyleSheet.absoluteFillObject, backgroundColor: '#964b00' },
-    headerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)' },
-    backButton: { position: 'absolute', top: 40, left: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' },
-    searchButton: { position: 'absolute', top: 40, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center' },
+    header: {
+        height: 180, // Sedikit lebih tinggi untuk proporsi
+        width: '100%',
+        position: 'relative',
+        justifyContent: 'flex-start',
+    },
+    headerContent: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: 10, // Tambahan padding aman
+        zIndex: 10,
+    },
+    decorativeIcon: {
+        position: 'absolute',
+        right: -20,
+        bottom: -20,
+        opacity: 0.5,
+        transform: [{ rotate: '-15deg' }]
+    },
 
-    profileSection: { paddingHorizontal: 20, marginTop: -40 },
+    // Buttons
+    backButton: {
+        width: 40, height: 40, borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center', justifyContent: 'center'
+    },
+    searchButton: {
+        width: 40, height: 40, borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center', justifyContent: 'center'
+    },
+
+    profileSection: { paddingHorizontal: 20, marginTop: -50, zIndex: 20 },
     profileCard: {
-        backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center',
-        ...SHADOWS.medium, marginBottom: 16
+        backgroundColor: '#fff', borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center',
+        ...SHADOWS.medium, marginBottom: 16,
+        // Shadow improvement
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5,
     },
     avatarContainer: {
-        width: 60, height: 60, borderRadius: 30, backgroundColor: '#fed7aa', alignItems: 'center', justifyContent: 'center', marginRight: 16,
-        position: 'relative'
+        width: 64, height: 64, borderRadius: 32, backgroundColor: '#fed7aa', alignItems: 'center', justifyContent: 'center', marginRight: 16,
+        position: 'relative', borderWidth: 2, borderColor: '#fff'
     },
-    avatarText: { fontSize: 20, fontWeight: '800', color: '#9a3412' },
-    onlineStatus: { position: 'absolute', bottom: 2, right: 2, width: 12, height: 12, borderRadius: 6, backgroundColor: '#10b981', borderWidth: 2, borderColor: '#fff' },
+    avatarText: { fontSize: 24, fontWeight: '800', color: '#9a3412' },
+    onlineStatus: { position: 'absolute', bottom: 2, right: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: '#10b981', borderWidth: 2, borderColor: '#fff' },
 
     profileInfo: { flex: 1 },
-    shopName: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 4 },
+    shopName: { fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
     locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
     locationText: { fontSize: 13, color: '#6b7280' },
     statsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -180,24 +317,51 @@ const styles = StyleSheet.create({
     followButton: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#964b00', borderRadius: 20 },
     followButtonText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
-    description: { fontSize: 14, color: '#4b5563', lineHeight: 20, marginBottom: 16, paddingHorizontal: 4 },
+    description: { fontSize: 14, color: '#4b5563', lineHeight: 22, marginBottom: 20, marginHorizontal: 4 },
 
     actionButtons: { flexDirection: 'row', gap: 12 },
-    chatButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#964b00', backgroundColor: '#fff' },
-    chatButtonText: { color: '#964b00', fontWeight: '600', fontSize: 14 },
-    shareButton: { flex: 0, width: 48, borderColor: '#d1d5db' },
+    chatButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: '#964b00', backgroundColor: '#fff' },
+    chatButtonText: { color: '#964b00', fontWeight: '600', fontSize: 15 },
+    shareButton: { flex: 0, width: 52, borderColor: '#e5e7eb' },
 
-    productsSection: { padding: 20 },
-    sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
+    productsSection: { padding: 20, paddingTop: 0 },
+    sectionTitle: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 16 },
     gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 16 },
 
     productCardWrapper: { width: '100%' },
-    productCard: { backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', ...SHADOWS.small, width: '100%' },
-    productImage: { height: COLUMN_WIDTH - 20, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' },
+    productCard: { backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', ...SHADOWS.small, width: '100%', borderWidth: 1, borderColor: '#f3f4f6' },
+    productImage: { height: COLUMN_WIDTH - 20, backgroundColor: '#f9fafb', alignItems: 'center', justifyContent: 'center' },
     productInfo: { padding: 12 },
     productName: { fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 6, height: 40 },
     productPrice: { fontSize: 15, fontWeight: '800', color: '#964b00', marginBottom: 4 },
     productSold: { fontSize: 11, color: '#9ca3af' },
+
+    // Admin Styles Re-polished
+    adminPanel: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        padding: 16,
+        ...SHADOWS.small
+    },
+    adminHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+    adminPanelTitle: { fontSize: 16, fontWeight: 'bold', color: '#9a3412' },
+
+    adminInfoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+    adminLabel: { fontSize: 14, color: '#6b7280' },
+    adminValue: { fontSize: 14, color: '#111827', fontWeight: '500' },
+
+    statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginLeft: 4 },
+    statusTextPill: { fontSize: 12, fontWeight: 'bold' },
+
+    adminActions: { flexDirection: 'row', gap: 12, marginTop: 16 },
+    adminBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 12 },
+    approveBtn: { backgroundColor: '#16a34a', shadowColor: '#16a34a', shadowOpacity: 0.3, shadowRadius: 5, shadowOffset: { width: 0, height: 2 } },
+    rejectBtn: { backgroundColor: '#fee2e2', borderWidth: 1, borderColor: '#fca5a5' },
+    suspendBtn: { backgroundColor: '#ea580c' },
+    adminBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
 });
 
 export default SellerProfileScreen;

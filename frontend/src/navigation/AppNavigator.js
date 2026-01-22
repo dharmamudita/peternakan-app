@@ -41,6 +41,7 @@ import {
     HelpScreen,
     AdminDashboardScreen,
     EducationManagementScreen,
+    SellerManagementScreen,
     BroadcastScreen,
     NotificationScreen,
     ProductDetailScreen,
@@ -199,6 +200,7 @@ const AppNavigator = () => {
                         <Stack.Screen name="Help" component={HelpScreen} />
                         <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
                         <Stack.Screen name="EducationManagement" component={EducationManagementScreen} />
+                        <Stack.Screen name="SellerManagement" component={SellerManagementScreen} />
                         <Stack.Screen name="Broadcast" component={BroadcastScreen} />
                         <Stack.Screen name="Notification" component={NotificationScreen} />
                         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
