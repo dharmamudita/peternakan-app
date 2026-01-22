@@ -303,10 +303,7 @@ const ProductDetailScreen = ({ navigation, route }) => {
                                         </Text>
                                     </View>
                                 </View>
-                                <TouchableOpacity style={styles.chatButton}>
-                                    <Ionicons name="chatbubble-ellipses-outline" size={16} color="#964b00" />
-                                    <Text style={styles.chatButtonText}>Chat</Text>
-                                </TouchableOpacity>
+                                <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
                             </View>
                         </TouchableOpacity>
 
