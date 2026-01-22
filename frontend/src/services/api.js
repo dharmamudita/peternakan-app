@@ -158,14 +158,17 @@ export const cartApi = {
 
 // Order endpoints
 export const orderApi = {
-    create: (data) => api.post('/orders', data),
-    getMyOrders: (params) => api.get('/orders/my', { params }),
+    // Buyer
+    create: (data) => api.post('/orders/create', data),
+    getMyOrders: (status) => api.get('/orders/my', { params: { status } }),
     getById: (id) => api.get(`/orders/${id}`),
-    getByNumber: (orderNumber) => api.get(`/orders/number/${orderNumber}`),
-    cancel: (id, reason) => api.put(`/orders/${id}/cancel`, { reason }),
-    getSellerOrders: (params) => api.get('/orders/seller', { params }),
-    updateStatus: (id, status, note) => api.put(`/orders/${id}/status`, { status, note }),
-    getStats: () => api.get('/orders/stats'),
+    confirmReceipt: (id) => api.put(`/orders/${id}/confirm-receipt`),
+    addReview: (id, rating, comment) => api.post(`/orders/${id}/review`, { rating, comment }),
+
+    // Seller
+    getSellerOrders: (status) => api.get('/orders/seller/list', { params: { status } }),
+    confirmOrder: (id) => api.put(`/orders/${id}/confirm`),
+    shipOrder: (id, trackingNumber) => api.put(`/orders/${id}/ship`, { trackingNumber }),
 };
 
 // Course endpoints

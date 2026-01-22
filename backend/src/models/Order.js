@@ -1,240 +1,192 @@
 /**
  * Order Model
- * Model untuk pesanan di marketplace
+ * Model untuk pesanan
  */
 
 const { db } = require('../config/firebase');
-const { COLLECTIONS, ORDER_STATUS } = require('../config/constants');
+
+const ORDER_STATUS = {
+    PENDING: 'pending',       // Menunggu pembayaran
+    PAID: 'paid',             // Sudah bayar, menunggu konfirmasi seller
+    PROCESSING: 'processing', // Seller konfirmasi, sedang dikemas
+    SHIPPED: 'shipped',       // Sudah dikirim
+    DELIVERED: 'delivered',   // Sampai, menunggu konfirmasi pembeli
+    COMPLETED: 'completed',   // Selesai + sudah dikonfirmasi pembeli
+    CANCELLED: 'cancelled',   // Dibatalkan
+};
 
 class Order {
     constructor(data) {
         this.id = data.id || null;
-        this.orderNumber = data.orderNumber || '';
         this.buyerId = data.buyerId || '';
         this.sellerId = data.sellerId || '';
-        this.items = data.items || []; // Array of { productId, name, price, quantity, subtotal, image }
-        this.subtotal = data.subtotal || 0;
-        this.shippingCost = data.shippingCost || 0;
-        this.tax = data.tax || 0;
-        this.discount = data.discount || 0;
-        this.total = data.total || 0;
-        this.status = data.status || ORDER_STATUS.PENDING;
-        this.paymentMethod = data.paymentMethod || '';
-        this.paymentStatus = data.paymentStatus || 'unpaid'; // unpaid, paid, refunded
-        this.paymentDetails = data.paymentDetails || {};
-        this.shippingAddress = data.shippingAddress || {
-            recipientName: '',
-            phone: '',
-            street: '',
-            city: '',
-            province: '',
-            postalCode: '',
-            notes: '',
-        };
+        this.shopId = data.shopId || '';
+        this.items = data.items || []; // [{productId, name, price, quantity, image}]
+        this.totalAmount = data.totalAmount || 0;
+        this.shippingAddress = data.shippingAddress || {};
         this.shippingMethod = data.shippingMethod || '';
+        this.shippingCost = data.shippingCost || 0;
         this.trackingNumber = data.trackingNumber || '';
+        this.status = data.status || ORDER_STATUS.PENDING;
+        this.buyerName = data.buyerName || '';
+        this.buyerPhone = data.buyerPhone || '';
         this.notes = data.notes || '';
-        this.timeline = data.timeline || []; // Array of { status, timestamp, note }
-        this.estimatedDelivery = data.estimatedDelivery || null;
-        this.deliveredAt = data.deliveredAt || null;
-        this.cancelledAt = data.cancelledAt || null;
-        this.cancelReason = data.cancelReason || '';
-        this.createdAt = data.createdAt || new Date();
-        this.updatedAt = data.updatedAt || new Date();
+        this.review = data.review || null; // {rating, comment, createdAt}
+        this.statusHistory = data.statusHistory || [];
+        this.createdAt = this.parseDate(data.createdAt) || new Date();
+        this.updatedAt = this.parseDate(data.updatedAt) || new Date();
+        this.paidAt = this.parseDate(data.paidAt) || null;
+        this.shippedAt = this.parseDate(data.shippedAt) || null;
+        this.completedAt = this.parseDate(data.completedAt) || null;
+    }
+
+    parseDate(dateVal) {
+        if (!dateVal) return null;
+        if (dateVal instanceof Date) return dateVal;
+        if (dateVal.toDate && typeof dateVal.toDate === 'function') return dateVal.toDate();
+        if (typeof dateVal === 'string' || typeof dateVal === 'number') return new Date(dateVal);
+        if (dateVal._seconds) return new Date(dateVal._seconds * 1000);
+        return null;
     }
 
     toJSON() {
         return {
             id: this.id,
-            orderNumber: this.orderNumber,
             buyerId: this.buyerId,
             sellerId: this.sellerId,
+            shopId: this.shopId,
             items: this.items,
-            subtotal: this.subtotal,
-            shippingCost: this.shippingCost,
-            tax: this.tax,
-            discount: this.discount,
-            total: this.total,
-            status: this.status,
-            paymentMethod: this.paymentMethod,
-            paymentStatus: this.paymentStatus,
-            paymentDetails: this.paymentDetails,
+            totalAmount: this.totalAmount,
             shippingAddress: this.shippingAddress,
             shippingMethod: this.shippingMethod,
+            shippingCost: this.shippingCost,
             trackingNumber: this.trackingNumber,
+            status: this.status,
+            buyerName: this.buyerName,
+            buyerPhone: this.buyerPhone,
             notes: this.notes,
-            timeline: this.timeline,
-            estimatedDelivery: this.estimatedDelivery,
-            deliveredAt: this.deliveredAt,
-            cancelledAt: this.cancelledAt,
-            cancelReason: this.cancelReason,
+            review: this.review,
+            statusHistory: this.statusHistory,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            paidAt: this.paidAt,
+            shippedAt: this.shippedAt,
+            completedAt: this.completedAt,
         };
     }
 
-    toFirestore() {
-        const data = this.toJSON();
-        delete data.id;
-        return data;
-    }
-
-    static generateOrderNumber() {
-        const date = new Date();
-        const year = date.getFullYear().toString().slice(-2);
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-        return `ORD${year}${month}${day}${random}`;
-    }
-
+    // Create new order
     static async create(orderData) {
-        const order = new Order(orderData);
-        order.orderNumber = Order.generateOrderNumber();
-        order.timeline = [{
-            status: ORDER_STATUS.PENDING,
-            timestamp: new Date(),
-            note: 'Pesanan dibuat',
-        }];
+        const order = new Order({
+            ...orderData,
+            statusHistory: [{
+                status: orderData.status || ORDER_STATUS.PAID,
+                timestamp: new Date(),
+                note: 'Pesanan dibuat'
+            }],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            paidAt: orderData.status === ORDER_STATUS.PAID ? new Date() : null,
+        });
 
-        const docRef = await db.collection(COLLECTIONS.ORDERS).add(order.toFirestore());
+        const data = order.toJSON();
+        delete data.id;
+
+        const docRef = await db.collection('orders').add(data);
         order.id = docRef.id;
         return order;
     }
 
+    // Get order by ID
     static async getById(id) {
-        const doc = await db.collection(COLLECTIONS.ORDERS).doc(id).get();
+        const doc = await db.collection('orders').doc(id).get();
         if (!doc.exists) return null;
         return new Order({ id: doc.id, ...doc.data() });
     }
 
-    static async getByOrderNumber(orderNumber) {
-        const snapshot = await db.collection(COLLECTIONS.ORDERS)
-            .where('orderNumber', '==', orderNumber)
-            .limit(1)
-            .get();
-
-        if (snapshot.empty) return null;
-        const doc = snapshot.docs[0];
-        return new Order({ id: doc.id, ...doc.data() });
-    }
-
-    static async getByBuyerId(buyerId, page = 1, limit = 10, filters = {}) {
-        let query = db.collection(COLLECTIONS.ORDERS)
-            .where('buyerId', '==', buyerId);
-
-        if (filters.status) {
-            query = query.where('status', '==', filters.status);
+    // Get orders by buyer
+    static async getByBuyerId(buyerId, status = null) {
+        let query = db.collection('orders').where('buyerId', '==', buyerId);
+        if (status && status !== 'all') {
+            query = query.where('status', '==', status);
         }
-
-        const countSnapshot = await query.get();
-        const total = countSnapshot.size;
-
-        query = query.orderBy('createdAt', 'desc')
-            .offset((page - 1) * limit)
-            .limit(limit);
-
-        const snapshot = await query.get();
-        const orders = snapshot.docs.map(doc => new Order({ id: doc.id, ...doc.data() }));
-
-        return {
-            data: orders,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-            },
-        };
+        const snapshot = await query.orderBy('createdAt', 'desc').get();
+        return snapshot.docs.map(doc => new Order({ id: doc.id, ...doc.data() }));
     }
 
-    static async getBySellerId(sellerId, page = 1, limit = 10, filters = {}) {
-        let query = db.collection(COLLECTIONS.ORDERS)
-            .where('sellerId', '==', sellerId);
-
-        if (filters.status) {
-            query = query.where('status', '==', filters.status);
+    // Get orders by seller
+    static async getBySellerId(sellerId, status = null) {
+        let query = db.collection('orders').where('sellerId', '==', sellerId);
+        if (status && status !== 'all') {
+            query = query.where('status', '==', status);
         }
-
-        const countSnapshot = await query.get();
-        const total = countSnapshot.size;
-
-        query = query.orderBy('createdAt', 'desc')
-            .offset((page - 1) * limit)
-            .limit(limit);
-
-        const snapshot = await query.get();
-        const orders = snapshot.docs.map(doc => new Order({ id: doc.id, ...doc.data() }));
-
-        return {
-            data: orders,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-            },
-        };
+        const snapshot = await query.orderBy('createdAt', 'desc').get();
+        return snapshot.docs.map(doc => new Order({ id: doc.id, ...doc.data() }));
     }
 
-    static async updateStatus(id, status, note = '') {
-        const order = await Order.getById(id);
+    // Update order status
+    static async updateStatus(orderId, newStatus, note = '') {
+        const order = await this.getById(orderId);
         if (!order) return null;
 
-        const timeline = order.timeline || [];
-        timeline.push({
-            status,
-            timestamp: new Date(),
-            note,
-        });
-
         const updateData = {
-            status,
-            timeline,
+            status: newStatus,
             updatedAt: new Date(),
+            statusHistory: [...order.statusHistory, {
+                status: newStatus,
+                timestamp: new Date(),
+                note: note || `Status diubah ke ${newStatus}`
+            }]
         };
 
-        if (status === ORDER_STATUS.DELIVERED) {
-            updateData.deliveredAt = new Date();
-        }
-        if (status === ORDER_STATUS.CANCELLED) {
-            updateData.cancelledAt = new Date();
-            updateData.cancelReason = note;
-        }
+        // Add specific timestamps
+        if (newStatus === ORDER_STATUS.PAID) updateData.paidAt = new Date();
+        if (newStatus === ORDER_STATUS.SHIPPED) updateData.shippedAt = new Date();
+        if (newStatus === ORDER_STATUS.COMPLETED) updateData.completedAt = new Date();
 
-        await db.collection(COLLECTIONS.ORDERS).doc(id).update(updateData);
-        return await Order.getById(id);
+        await db.collection('orders').doc(orderId).update(updateData);
+        return await this.getById(orderId);
     }
 
-    static async update(id, updateData) {
-        updateData.updatedAt = new Date();
-        await db.collection(COLLECTIONS.ORDERS).doc(id).update(updateData);
-        return await Order.getById(id);
+    // Add tracking number
+    static async addTrackingNumber(orderId, trackingNumber) {
+        await db.collection('orders').doc(orderId).update({
+            trackingNumber,
+            updatedAt: new Date()
+        });
+        return await this.getById(orderId);
     }
 
-    static async getOrderStats(sellerId) {
-        const snapshot = await db.collection(COLLECTIONS.ORDERS)
-            .where('sellerId', '==', sellerId)
-            .get();
-
-        const stats = {
-            total: snapshot.size,
-            byStatus: {},
-            totalRevenue: 0,
-            totalPaid: 0,
+    // Add review
+    static async addReview(orderId, rating, comment) {
+        const review = {
+            rating,
+            comment,
+            createdAt: new Date()
         };
 
-        snapshot.docs.forEach(doc => {
-            const order = doc.data();
-            stats.byStatus[order.status] = (stats.byStatus[order.status] || 0) + 1;
-            stats.totalRevenue += order.total;
-            if (order.paymentStatus === 'paid') {
-                stats.totalPaid += order.total;
-            }
+        await db.collection('orders').doc(orderId).update({
+            review,
+            updatedAt: new Date()
         });
 
-        return stats;
+        // Also add to reviews collection for product/seller
+        const order = await this.getById(orderId);
+        if (order) {
+            await db.collection('reviews').add({
+                orderId,
+                productId: order.items[0]?.productId,
+                sellerId: order.sellerId,
+                buyerId: order.buyerId,
+                buyerName: order.buyerName,
+                rating,
+                comment,
+                createdAt: new Date()
+            });
+        }
+
+        return order;
     }
 }
 
-module.exports = Order;
+module.exports = { Order, ORDER_STATUS };

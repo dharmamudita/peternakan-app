@@ -6,12 +6,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Image, Dimensions, Platform, StatusBar, Alert, Animated
+    Image, Dimensions, Platform, StatusBar, Alert, Animated, ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
+import { orderApi } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -67,8 +68,49 @@ const ProductDetailScreen = ({ navigation, route }) => {
         }).format(price);
     };
 
-    const handleBuyNow = () => {
-        Alert.alert('Fitur Pembayaran', 'Akan segera diintegrasikan dengan Midtrans');
+    // State for buying
+    const [isBuying, setIsBuying] = useState(false);
+
+    const showAlert = (title, message) => {
+        if (Platform.OS === 'web') {
+            window.alert(`${title}\n\n${message}`);
+        } else {
+            Alert.alert(title, message);
+        }
+    };
+
+    const handleBuyNow = async () => {
+        const confirmBuy = async () => {
+            setIsBuying(true);
+            try {
+                await orderApi.create({
+                    productId: product.id,
+                    quantity: 1,
+                });
+                showAlert('Pembelian Berhasil! 🎉', 'Pesanan Anda telah dibuat. Penjual akan segera memproses pesanan Anda.');
+                navigation.navigate('OrderHistory');
+            } catch (error) {
+                console.error('Buy error:', error);
+                showAlert('Gagal', error.message || 'Gagal membuat pesanan');
+            } finally {
+                setIsBuying(false);
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm(`Beli ${product.name} seharga ${formatPrice(product.price)}?`)) {
+                await confirmBuy();
+            }
+        } else {
+            Alert.alert(
+                'Konfirmasi Pembelian',
+                `Beli ${product.name} seharga ${formatPrice(product.price)}?`,
+                [
+                    { text: 'Batal', style: 'cancel' },
+                    { text: 'Beli', onPress: confirmBuy }
+                ]
+            );
+        }
     };
 
     return (
@@ -255,13 +297,21 @@ const ProductDetailScreen = ({ navigation, route }) => {
                 <TouchableOpacity style={styles.cartButton}>
                     <Ionicons name="chatbubbles-outline" size={24} color="#374151" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.buyButton} onPress={handleBuyNow}>
+                <TouchableOpacity
+                    style={[styles.buyButton, isBuying && { opacity: 0.7 }]}
+                    onPress={handleBuyNow}
+                    disabled={isBuying}
+                >
                     <LinearGradient
                         colors={['#b87333', '#964b00']}
                         start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                         style={styles.buyGradient}
                     >
-                        <Text style={styles.buyText}>Beli Sekarang</Text>
+                        {isBuying ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <Text style={styles.buyText}>Beli Sekarang</Text>
+                        )}
                     </LinearGradient>
                 </TouchableOpacity>
             </View>

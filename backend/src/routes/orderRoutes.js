@@ -5,25 +5,40 @@
 
 const express = require('express');
 const router = express.Router();
-const { marketplaceController } = require('../controllers');
-const { authenticate, sellerOnly, validate, schemas } = require('../middlewares');
+const orderController = require('../controllers/orderController');
+const { authenticate, sellerOnly } = require('../middlewares');
 
 // All order routes require authentication
 router.use(authenticate);
 
-// Buyer routes
-router.get('/my', marketplaceController.getMyOrders);
-router.post('/', validate(schemas.createOrder), marketplaceController.createOrder);
-router.get('/number/:orderNumber', marketplaceController.getOrderByNumber);
-router.put('/:id/cancel', marketplaceController.cancelOrder);
+/**
+ * BUYER ROUTES
+ */
+// Create order (buy now)
+router.post('/create', orderController.createOrder);
 
-// Seller routes
-router.get('/seller', sellerOnly, marketplaceController.getSellerOrders);
-router.get('/stats', sellerOnly, marketplaceController.getOrderStats);
-router.put('/:id/status', sellerOnly, marketplaceController.updateOrderStatus);
-router.put('/:id/confirm-payment', sellerOnly, marketplaceController.confirmPayment);
+// Get my orders
+router.get('/my', orderController.getMyOrders);
 
-// Get order by ID (buyer or seller)
-router.get('/:id', marketplaceController.getOrderById);
+// Get order detail
+router.get('/:id', orderController.getOrderDetail);
+
+// Confirm receipt
+router.put('/:id/confirm-receipt', orderController.confirmReceipt);
+
+// Add review
+router.post('/:id/review', orderController.addReview);
+
+/**
+ * SELLER ROUTES
+ */
+// Get seller orders
+router.get('/seller/list', sellerOnly, orderController.getSellerOrders);
+
+// Confirm order (start processing)
+router.put('/:id/confirm', sellerOnly, orderController.confirmOrder);
+
+// Ship order
+router.put('/:id/ship', sellerOnly, orderController.shipOrder);
 
 module.exports = router;
