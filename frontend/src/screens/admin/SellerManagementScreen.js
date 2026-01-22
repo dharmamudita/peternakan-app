@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, StatusBar, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, StatusBar, Alert, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../../constants/theme';
@@ -20,18 +20,20 @@ const SellerManagementScreen = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    const fetchShops = async () => {
+    const fetchShops = async (statusFilter = filterStatus) => {
         try {
-            // Untuk saat ini, kita hanya punya endpoint getPending
-            // Idealnya ada endpoint getAll untuk admin
-            const response = await shopApi.getPending();
+            setLoading(true);
+            const response = await shopApi.getPending(statusFilter);
             if (response.data && Array.isArray(response.data)) {
                 setShops(response.data);
             } else if (Array.isArray(response)) {
                 setShops(response);
+            } else {
+                setShops([]);
             }
         } catch (error) {
             console.error('Error fetching shops:', error);
+            setShops([]);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -40,44 +42,65 @@ const SellerManagementScreen = ({ navigation }) => {
 
     useFocusEffect(
         useCallback(() => {
-            fetchShops();
-        }, [])
+            fetchShops(filterStatus);
+        }, [filterStatus])
     );
+
+    // Re-fetch when filter changes
+    const handleFilterChange = (newStatus) => {
+        setFilterStatus(newStatus);
+        fetchShops(newStatus);
+    };
 
     const onRefresh = () => {
         setRefreshing(true);
-        fetchShops();
+        fetchShops(filterStatus);
     };
 
     const handleVerify = async (shop, status) => {
         const action = status === 'VERIFIED' ? 'menyetujui' : 'menolak';
-        Alert.alert(
-            'Konfirmasi',
-            `Apakah Anda yakin ingin ${action} toko "${shop.name}"?`,
-            [
-                { text: 'Batal', style: 'cancel' },
-                {
-                    text: 'Ya',
-                    onPress: async () => {
-                        try {
-                            await shopApi.verify(shop.id, status);
-                            Alert.alert('Berhasil', `Toko berhasil ${status === 'VERIFIED' ? 'diverifikasi' : 'ditolak'}`);
-                            fetchShops(); // Refresh list
-                        } catch (error) {
-                            Alert.alert('Gagal', error.message || 'Terjadi kesalahan');
-                        }
-                    }
+        const message = `Apakah Anda yakin ingin ${action} toko "${shop.name}"?`;
+
+        const doVerify = async () => {
+            try {
+                await shopApi.verify(shop.id, status);
+                if (Platform.OS === 'web') {
+                    window.alert(`Toko berhasil ${status === 'VERIFIED' ? 'diverifikasi' : 'ditolak'}`);
+                } else {
+                    Alert.alert('Berhasil', `Toko berhasil ${status === 'VERIFIED' ? 'diverifikasi' : 'ditolak'}`);
                 }
-            ]
-        );
+                fetchShops(); // Refresh list
+            } catch (error) {
+                const errMsg = error.message || 'Terjadi kesalahan';
+                if (Platform.OS === 'web') {
+                    window.alert(`Gagal: ${errMsg}`);
+                } else {
+                    Alert.alert('Gagal', errMsg);
+                }
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm(message)) {
+                await doVerify();
+            }
+        } else {
+            Alert.alert(
+                'Konfirmasi',
+                message,
+                [
+                    { text: 'Batal', style: 'cancel' },
+                    { text: 'Ya', onPress: doVerify }
+                ]
+            );
+        }
     };
 
+    // Client-side filter hanya untuk search (status sudah di-filter dari server)
     const filteredShops = shops.filter(shop => {
         const matchesSearch = shop.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             shop.address?.toLowerCase().includes(searchQuery.toLowerCase());
-        // Untuk filter, jika filterStatus === 'all', tampilkan semua
-        const matchesFilter = filterStatus === 'all' || shop.status === filterStatus;
-        return matchesSearch && matchesFilter;
+        return matchesSearch;
     });
 
     const renderHeader = () => (
@@ -121,7 +144,7 @@ const SellerManagementScreen = ({ navigation }) => {
                         <TouchableOpacity
                             key={tab.key}
                             style={[styles.filterTab, filterStatus === tab.key && styles.activeFilterTab]}
-                            onPress={() => setFilterStatus(tab.key)}
+                            onPress={() => handleFilterChange(tab.key)}
                         >
                             <Text style={[styles.filterText, filterStatus === tab.key && styles.activeFilterText]}>
                                 {tab.label}

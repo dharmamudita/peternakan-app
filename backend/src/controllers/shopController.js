@@ -37,10 +37,11 @@ const getMyShop = asyncHandler(async (req, res) => {
     return success(res, shop.toJSON(), 'Data toko berhasil diambil');
 });
 
-// Admin: Get All Pending Shops
+// Admin: Get Shops by Status (or all)
 const getPendingShops = asyncHandler(async (req, res) => {
-    const shops = await Shop.getAllPending();
-    return success(res, shops.map(s => s.toJSON()), 'Daftar pengajuan toko berhasil diambil');
+    const { status } = req.query; // Can be 'PENDING', 'VERIFIED', 'REJECTED', or undefined for all
+    const shops = await Shop.getAllByStatus(status || 'PENDING');
+    return success(res, shops.map(s => s.toJSON()), 'Daftar toko berhasil diambil');
 });
 
 // Admin: Approve/Reject Shop

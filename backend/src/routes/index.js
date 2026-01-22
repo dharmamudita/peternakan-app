@@ -62,5 +62,6 @@ router.use('/education', educationRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/shops', require('./shopRoutes'));
+router.use('/seller', require('./sellerRoutes'));
 
 module.exports = router;

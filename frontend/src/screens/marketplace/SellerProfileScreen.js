@@ -6,12 +6,13 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Image, Dimensions, FlatList, Platform, Alert, StatusBar, ActivityIndicator
+    Image, Dimensions, FlatList, Platform, Alert, StatusBar, ActivityIndicator,
+    RefreshControl
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, SIZES } from '../../constants/theme';
-import { productApi } from '../../services/api';
+import { productApi, shopApi } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 48) / 2;
@@ -20,11 +21,13 @@ const SellerProfileScreen = ({ navigation, route }) => {
     const insets = useSafeAreaInsets();
     const { sellerId, asAdmin, sellerData } = route.params || {};
 
-    // State for Products
+    // State for Shop and Products
+    const [shop, setShop] = useState(null);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    // Dummy Data Toko (Default fallback if API not ready for profile details)
+    // Default seller data fallback
     const defaultSeller = {
         name: 'Toko Peternak Jaya',
         location: 'Blitar, Jawa Timur',
@@ -38,54 +41,57 @@ const SellerProfileScreen = ({ navigation, route }) => {
         joinedAt: 'Jan 2023'
     };
 
-    // Merge dengan data yang dipassing
-    const seller = { ...defaultSeller, ...(sellerData || {}) };
+    // Merge shop data with defaults
+    const seller = shop ? {
+        name: shop.name || defaultSeller.name,
+        location: shop.address || defaultSeller.location,
+        rating: shop.rating || 4.8,
+        followers: 0,
+        description: shop.description || '',
+        online: true,
+        status: shop.status?.toLowerCase() || 'pending',
+        phoneNumber: shop.phoneNumber,
+        joinedAt: shop.createdAt ? new Date(shop.createdAt).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : 'Baru'
+    } : { ...defaultSeller, ...(sellerData || {}) };
 
     useEffect(() => {
-        fetchShopProducts();
+        fetchData();
     }, []);
 
-    const fetchShopProducts = async () => {
+    const fetchData = async () => {
         try {
-            // Jika ada sellerId, fetch produk orang lain. Jika tidak, fetch produk sendiri (My Products)
-            // Note: API getMyProducts sudah ada. API getSellerProducts perlu endpoint public filter by seller.
-            // Kita gunakan getMyProducts jika tidak ada sellerId, atau getAll filter by sellerId (jika didukung).
-
-            let response;
-            if (sellerId) {
-                // Public view of specific seller
-                // Assuming getAll supports ?sellerId=xxx query param or similar filter
-                // If not, we might need to rely on dummy/passed data for now or implement getProductsBySellerId in API
-                // For now, let's try calling getAll with seller filter if backend supports it standardly
-                // Or fallback to dummy if no specific endpoint
-
-                // WARNING: Standard crud usually allow filter.
-                // Let's assume user is viewing OWN profile for "connection" request context usually.
-                response = { data: { data: [] } }; // Placeholder for public view logic 
-                // (User request focus is "My Products" -> "Market" usually)
-            } else {
-                // Viewing OWN profile (from Dashboard or menu)
-                response = await productApi.getMyProducts();
+            // Fetch shop data
+            const shopResponse = await shopApi.getMyShop();
+            if (shopResponse.data) {
+                setShop(shopResponse.data);
             }
 
-            console.log('SellerProfileScreen response:', response);
-
+            // Fetch products
             let productsData = [];
-            if (response.data && Array.isArray(response.data)) {
-                productsData = response.data;
-            } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-                productsData = response.data.data;
-            } else if (Array.isArray(response)) {
-                productsData = response;
+            if (sellerId) {
+                // Public view - would need separate endpoint for seller's products
+                // For now, leave empty
+            } else {
+                // My own profile - fetch my products
+                const response = await productApi.getMyProducts();
+                if (response.data && Array.isArray(response.data)) {
+                    productsData = response.data;
+                } else if (response.data?.data && Array.isArray(response.data.data)) {
+                    productsData = response.data.data;
+                }
             }
-
-            console.log('Resolved products count:', productsData.length);
             setProducts(productsData);
         } catch (error) {
-            console.error('Fetch shop products error:', error);
+            console.error('Fetch shop data error:', error);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
+    };
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchData();
     };
 
     const formatPrice = (price) => {

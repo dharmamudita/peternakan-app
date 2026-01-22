@@ -2,14 +2,16 @@
  * Seller Dashboard Screen - Tema Putih + Coklat
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInRight, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { shopApi, sellerApi } from '../../services/api';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
@@ -17,53 +19,107 @@ const SellerDashboardScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const { user } = useAuth();
 
-    const stats = [
-        { id: 1, label: 'Produk Aktif', value: '12', icon: 'cube', color: '#964b00', bgColor: '#faf8f5' },
-        { id: 2, label: 'Pesanan Baru', value: '5', icon: 'cart', color: '#7c3f06', bgColor: '#fdf5ef' },
-        { id: 3, label: 'Menunggu Kirim', value: '3', icon: 'time', color: '#b87333', bgColor: '#fef7f1' },
-        { id: 4, label: 'Selesai', value: '28', icon: 'checkmark-circle', color: '#5d3a1a', bgColor: '#faf5f0' },
-    ];
-
-    const menuItems = [
-        { id: 1, title: 'Kelola Produk', subtitle: 'Tambah, edit produk', icon: 'cube', gradient: ['#964b00', '#7c3f06'], route: 'MyProducts' },
-        { id: 2, title: 'Pesanan Masuk', subtitle: '5 pesanan baru', icon: 'receipt', gradient: ['#7c3f06', '#5d3a1a'], badge: 5 },
-        { id: 3, title: 'Pengiriman', subtitle: '3 menunggu', icon: 'car', gradient: ['#b87333', '#964b00'], badge: 3 },
-        { id: 4, title: 'Pendapatan', subtitle: 'Statistik penjualan', icon: 'wallet', gradient: ['#5d3a1a', '#3d2510'] },
-        { id: 5, title: 'Ulasan', subtitle: '12 ulasan', icon: 'star', gradient: ['#964b00', '#b87333'] },
-        { id: 6, title: 'Pengaturan Toko', subtitle: 'Profil toko', icon: 'settings', gradient: ['#7c3f06', '#964b00'] },
-    ];
-
-    const recentOrders = [
-        { id: 1, buyer: 'Ahmad Sutan', product: 'Sapi Limosin', price: 25000000, status: 'Baru', time: '10 menit lalu' },
-        { id: 2, buyer: 'Budi Raharjo', product: 'Pakan Konsentrat', price: 350000, status: 'Dikemas', time: '1 jam lalu' },
-        { id: 3, buyer: 'Citra Dewi', product: 'Vitamin Ternak', price: 75000, status: 'Dikirim', time: '3 jam lalu' },
-    ];
+    // State for real data
+    const [shop, setShop] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [stats, setStats] = useState({
+        activeProducts: 0,
+        newOrders: 0,
+        pendingShipment: 0,
+        completed: 0,
+    });
+    const [revenue, setRevenue] = useState({
+        thisMonth: 0,
+        growth: 0,
+    });
+    const [recentOrders, setRecentOrders] = useState([]);
 
     const formatPrice = (price) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
 
-    const [shop, setShop] = React.useState(null);
-    const [loading, setLoading] = React.useState(true);
-
-    React.useEffect(() => {
-        const fetchShopStatus = async () => {
-            try {
-                const response = await import('../../services/api').then(module => module.shopApi.getMyShop());
-                if (response.data) {
-                    setShop(response.data);
-                } else {
-                    setShop(null); // Belum ada toko
-                }
-            } catch (error) {
-                console.log('Error fetching shop:', error);
+    const fetchDashboardData = async () => {
+        try {
+            // Fetch shop status
+            const shopResponse = await shopApi.getMyShop();
+            if (shopResponse.data) {
+                setShop(shopResponse.data);
+            } else {
                 setShop(null);
-            } finally {
-                setLoading(false);
+                return; // Stop here if no shop
             }
-        };
 
-        const unsubscribe = navigation.addListener('focus', fetchShopStatus);
-        return unsubscribe;
-    }, [navigation]);
+            // Only fetch stats if shop is verified
+            if (shopResponse.data?.status === 'VERIFIED') {
+                // Fetch stats
+                const statsResponse = await sellerApi.getStats();
+                if (statsResponse.data) {
+                    setStats({
+                        activeProducts: statsResponse.data.activeProducts || 0,
+                        newOrders: statsResponse.data.newOrders || 0,
+                        pendingShipment: statsResponse.data.pendingShipment || 0,
+                        completed: statsResponse.data.completed || 0,
+                    });
+                    setRevenue({
+                        thisMonth: statsResponse.data.monthlyRevenue || 0,
+                        growth: statsResponse.data.revenueGrowth || 0,
+                    });
+                }
+
+                // Fetch recent orders
+                const ordersResponse = await sellerApi.getRecentOrders(5);
+                if (ordersResponse.data && Array.isArray(ordersResponse.data)) {
+                    setRecentOrders(ordersResponse.data);
+                }
+            }
+        } catch (error) {
+            console.log('Error fetching dashboard data:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchDashboardData();
+        }, [])
+    );
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchDashboardData();
+    };
+
+    // Helper function to get relative time
+    const getTimeAgo = (date) => {
+        const now = new Date();
+        const orderDate = date instanceof Date ? date : new Date(date);
+        const diff = Math.floor((now - orderDate) / 1000);
+
+        if (diff < 60) return 'Baru saja';
+        if (diff < 3600) return `${Math.floor(diff / 60)} menit lalu`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} jam lalu`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)} hari lalu`;
+        return orderDate.toLocaleDateString('id-ID');
+    };
+
+    // Dynamic stats based on real data
+    const statsData = [
+        { id: 1, label: 'Produk Aktif', value: stats.activeProducts.toString(), icon: 'cube', color: '#964b00', bgColor: '#faf8f5' },
+        { id: 2, label: 'Pesanan Baru', value: stats.newOrders.toString(), icon: 'cart', color: '#7c3f06', bgColor: '#fdf5ef' },
+        { id: 3, label: 'Menunggu Kirim', value: stats.pendingShipment.toString(), icon: 'time', color: '#b87333', bgColor: '#fef7f1' },
+        { id: 4, label: 'Selesai', value: stats.completed.toString(), icon: 'checkmark-circle', color: '#5d3a1a', bgColor: '#faf5f0' },
+    ];
+
+    // Dynamic menu items
+    const menuItems = [
+        { id: 1, title: 'Kelola Produk', subtitle: `${stats.activeProducts} produk`, icon: 'cube', gradient: ['#964b00', '#7c3f06'], route: 'MyProducts' },
+        { id: 2, title: 'Pesanan Masuk', subtitle: `${stats.newOrders} pesanan baru`, icon: 'receipt', gradient: ['#7c3f06', '#5d3a1a'], badge: stats.newOrders > 0 ? stats.newOrders : null, route: 'SellerOrders' },
+        { id: 3, title: 'Pengiriman', subtitle: `${stats.pendingShipment} menunggu`, icon: 'car', gradient: ['#b87333', '#964b00'], badge: stats.pendingShipment > 0 ? stats.pendingShipment : null, route: 'SellerShipments' },
+        { id: 4, title: 'Pendapatan', subtitle: 'Statistik penjualan', icon: 'wallet', gradient: ['#5d3a1a', '#3d2510'], route: 'SellerRevenue' },
+        { id: 5, title: 'Ulasan', subtitle: 'Ulasan pembeli', icon: 'star', gradient: ['#964b00', '#b87333'], route: 'SellerReviews' },
+        { id: 6, title: 'Pengaturan Toko', subtitle: 'Profil toko', icon: 'settings', gradient: ['#7c3f06', '#964b00'], route: 'ShopSettings' },
+    ];
 
     if (loading) {
         return (
@@ -138,7 +194,12 @@ const SellerDashboardScreen = ({ navigation }) => {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#964b00']} />
+                }
+            >
                 <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
                     <View style={styles.headerTop}>
                         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -146,12 +207,9 @@ const SellerDashboardScreen = ({ navigation }) => {
                         </TouchableOpacity>
                         <View style={styles.headerCenter}>
                             <Text style={styles.headerSubtitle}>Dashboard 🏪</Text>
-                            <Text style={styles.headerTitle}>Toko Saya</Text>
+                            <Text style={styles.headerTitle}>{shop?.name || 'Toko Saya'}</Text>
                         </View>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <Ionicons name="notifications-outline" size={22} color="#374151" />
-                            <View style={styles.notifBadge}><Text style={styles.notifBadgeText}>5</Text></View>
-                        </TouchableOpacity>
+                        <View style={{ width: 44 }} />
                     </View>
                 </Animated.View>
 
@@ -161,10 +219,10 @@ const SellerDashboardScreen = ({ navigation }) => {
                         <View style={styles.summaryContent}>
                             <View style={styles.summaryLeft}>
                                 <Text style={styles.summaryLabel}>Pendapatan Bulan Ini</Text>
-                                <Text style={styles.summaryValue}>Rp 45.500.000</Text>
+                                <Text style={styles.summaryValue}>{formatPrice(revenue.thisMonth)}</Text>
                                 <View style={styles.trendBadge}>
-                                    <Ionicons name="trending-up" size={14} color="#ffffff" />
-                                    <Text style={styles.trendText}>+23% dari bulan lalu</Text>
+                                    <Ionicons name={revenue.growth >= 0 ? 'trending-up' : 'trending-down'} size={14} color="#ffffff" />
+                                    <Text style={styles.trendText}>{revenue.growth >= 0 ? '+' : ''}{revenue.growth}% dari bulan lalu</Text>
                                 </View>
                             </View>
                             <View style={styles.summaryIcon}>
@@ -176,7 +234,7 @@ const SellerDashboardScreen = ({ navigation }) => {
 
                 <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.section}>
                     <View style={styles.statsGrid}>
-                        {stats.map((stat, index) => (
+                        {statsData.map((stat, index) => (
                             <Animated.View key={stat.id} entering={FadeInUp.delay(index * 80).duration(400)} style={styles.statCard}>
                                 <View style={[styles.statIconContainer, { backgroundColor: stat.bgColor }]}>
                                     <Ionicons name={stat.icon} size={20} color={stat.color} />
@@ -215,32 +273,44 @@ const SellerDashboardScreen = ({ navigation }) => {
                 <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Pesanan Terbaru</Text>
-                        <TouchableOpacity><Text style={styles.seeAll}>Lihat Semua</Text></TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigation.navigate('SellerOrders')}>
+                            <Text style={styles.seeAll}>Lihat Semua</Text>
+                        </TouchableOpacity>
                     </View>
                     <View style={styles.ordersList}>
-                        {recentOrders.map((order, index) => (
-                            <Animated.View key={order.id} entering={FadeInRight.delay(index * 100).duration(400)}>
-                                <TouchableOpacity style={styles.orderCard} activeOpacity={0.9}>
-                                    <View style={[styles.orderIcon, { backgroundColor: getStatusColor(order.status) + '15' }]}>
-                                        <Ionicons name="bag-handle" size={22} color={getStatusColor(order.status)} />
-                                    </View>
-                                    <View style={styles.orderContent}>
-                                        <View style={styles.orderHeader}>
-                                            <Text style={styles.orderBuyer}>{order.buyer}</Text>
-                                            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '15' }]}>
-                                                <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
+                        {recentOrders.length === 0 ? (
+                            <View style={{ padding: 20, alignItems: 'center' }}>
+                                <Ionicons name="basket-outline" size={40} color="#d1d5db" />
+                                <Text style={{ color: '#9ca3af', marginTop: 8 }}>Belum ada pesanan</Text>
+                            </View>
+                        ) : (
+                            recentOrders.map((order, index) => {
+                                const timeAgo = order.createdAt ? getTimeAgo(order.createdAt) : '';
+                                return (
+                                    <Animated.View key={order.id} entering={FadeInRight.delay(index * 100).duration(400)}>
+                                        <TouchableOpacity style={styles.orderCard} activeOpacity={0.9}>
+                                            <View style={[styles.orderIcon, { backgroundColor: getStatusColor(order.status) + '15' }]}>
+                                                <Ionicons name="bag-handle" size={22} color={getStatusColor(order.status)} />
                                             </View>
-                                        </View>
-                                        <Text style={styles.orderProduct}>{order.product}</Text>
-                                        <View style={styles.orderMeta}>
-                                            <Text style={styles.orderPrice}>{formatPrice(order.price)}</Text>
-                                            <Text style={styles.orderTime}>• {order.time}</Text>
-                                        </View>
-                                    </View>
-                                    <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
-                                </TouchableOpacity>
-                            </Animated.View>
-                        ))}
+                                            <View style={styles.orderContent}>
+                                                <View style={styles.orderHeader}>
+                                                    <Text style={styles.orderBuyer}>{order.buyerName || 'Pembeli'}</Text>
+                                                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '15' }]}>
+                                                        <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>{order.status}</Text>
+                                                    </View>
+                                                </View>
+                                                <Text style={styles.orderProduct}>{order.productName || 'Produk'}</Text>
+                                                <View style={styles.orderMeta}>
+                                                    <Text style={styles.orderPrice}>{formatPrice(order.totalAmount || 0)}</Text>
+                                                    <Text style={styles.orderTime}>• {timeAgo}</Text>
+                                                </View>
+                                            </View>
+                                            <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+                                        </TouchableOpacity>
+                                    </Animated.View>
+                                );
+                            })
+                        )}
                     </View>
                 </Animated.View>
 

@@ -19,8 +19,19 @@ class Shop {
         this.status = data.status || 'PENDING'; // PENDING, VERIFIED, REJECTED, SUSPENDED
         this.rating = data.rating || 0;
         this.totalExams = data.totalExams || 0; // if applicable
-        this.createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
-        this.updatedAt = data.updatedAt ? new Date(data.updatedAt) : new Date();
+
+        // Handle dates robustly
+        this.createdAt = this.parseDate(data.createdAt) || new Date();
+        this.updatedAt = this.parseDate(data.updatedAt) || new Date();
+    }
+
+    parseDate(dateVal) {
+        if (!dateVal) return null;
+        if (dateVal instanceof Date) return dateVal;
+        if (dateVal.toDate && typeof dateVal.toDate === 'function') return dateVal.toDate();
+        if (typeof dateVal === 'string' || typeof dateVal === 'number') return new Date(dateVal);
+        if (dateVal._seconds) return new Date(dateVal._seconds * 1000);
+        return null;
     }
 
     toJSON() {
@@ -42,19 +53,28 @@ class Shop {
 
     // Simpan ke Firestore
     static async create(shopData) {
-        // Cek apakah user sudah punya toko
-        const existing = await this.getByUserId(shopData.userId);
-        if (existing) {
-            throw new Error('User sudah memiliki toko');
+        try {
+            console.log('[Shop.create] Input data:', shopData);
+
+            // Cek apakah user sudah punya toko
+            const existing = await this.getByUserId(shopData.userId);
+            if (existing) {
+                throw new Error('User sudah memiliki toko');
+            }
+
+            const shop = new Shop(shopData);
+            const data = shop.toJSON();
+            delete data.id; // Biarkan Firestore generate ID
+
+            console.log('[Shop.create] Saving to Firestore:', data);
+            const docRef = await db.collection('shops').add(data);
+            shop.id = docRef.id;
+            console.log('[Shop.create] Success, ID:', shop.id);
+            return shop;
+        } catch (error) {
+            console.error('[Shop.create] Error:', error.message);
+            throw error;
         }
-
-        const shop = new Shop(shopData);
-        const data = shop.toJSON();
-        delete data.id; // Biarkan Firestore generate ID
-
-        const docRef = await db.collection('shops').add(data);
-        shop.id = docRef.id;
-        return shop;
     }
 
     static async getByUserId(userId) {
@@ -78,6 +98,17 @@ class Shop {
         const snapshot = await db.collection('shops')
             .where('status', '==', 'PENDING')
             .get();
+        return snapshot.docs.map(doc => new Shop({ id: doc.id, ...doc.data() }));
+    }
+
+    static async getAllByStatus(status = null) {
+        let query = db.collection('shops');
+
+        if (status && status !== 'all') {
+            query = query.where('status', '==', status);
+        }
+
+        const snapshot = await query.get();
         return snapshot.docs.map(doc => new Shop({ id: doc.id, ...doc.data() }));
     }
 

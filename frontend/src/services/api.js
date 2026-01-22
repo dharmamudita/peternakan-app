@@ -134,8 +134,17 @@ export const productApi = {
 export const shopApi = {
     register: (data) => api.post('/shops/register', data),
     getMyShop: () => api.get('/shops/my'),
-    getPending: () => api.get('/shops/pending'),
+    getPending: (status) => api.get('/shops/pending', { params: { status } }),
     verify: (id, status) => api.put(`/shops/${id}/verify`, { status }),
+};
+
+// Seller Dashboard endpoints
+export const sellerApi = {
+    getStats: () => api.get('/seller/stats'),
+    getRecentOrders: (limit = 5) => api.get('/seller/orders/recent', { params: { limit } }),
+    getOrders: (status) => api.get('/seller/orders', { params: { status } }),
+    getRevenue: () => api.get('/seller/revenue'),
+    getReviews: () => api.get('/seller/reviews'),
 };
 
 // Cart endpoints
