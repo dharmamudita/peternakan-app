@@ -21,15 +21,44 @@ const MenuCard = ({ title, subtitle, icon, onPress, color = COLORS.primary }) =>
     </TouchableOpacity>
 );
 
+import { statsApi } from '../../services/api';
+import { useFocusEffect } from '@react-navigation/native';
+
 const AdminDashboardScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const { user } = useAuth();
+    const [dashboardStats, setDashboardStats] = useState({
+        totalUsers: 0,
+        totalShops: 0,
+        totalCourses: 0,
+        totalReports: 0
+    });
+
+    useFocusEffect(
+        React.useCallback(() => {
+            const fetchStats = async () => {
+                try {
+                    const response = await statsApi.getAdminStats();
+                    const data = response.data || response;
+                    setDashboardStats({
+                        totalUsers: data.totalUsers || 0,
+                        totalShops: data.totalShops || 0,
+                        totalCourses: data.totalCourses || 0,
+                        totalReports: data.totalReports || 0
+                    });
+                } catch (error) {
+                    console.error('AdminStats Error:', error);
+                }
+            };
+            fetchStats();
+        }, [])
+    );
 
     const stats = [
-        { label: 'Total User', value: '1.2k', icon: 'people', color: '#3b82f6', bg: '#dbeafe' },
-        { label: 'Total Toko', value: '85', icon: 'storefront', color: '#f59e0b', bg: '#fef3c7' },
-        { label: 'Active Ads', value: '320', icon: 'campaign', color: '#10b981', bg: '#d1fae5' },
-        { label: 'Laporan', value: '3', icon: 'alert-circle', color: '#ef4444', bg: '#fee2e2' },
+        { label: 'Total User', value: dashboardStats.totalUsers.toString(), icon: 'people', color: '#3b82f6', bg: '#dbeafe' },
+        { label: 'Total Toko', value: dashboardStats.totalShops.toString(), icon: 'storefront', color: '#f59e0b', bg: '#fef3c7' },
+        { label: 'Total Kursus', value: dashboardStats.totalCourses.toString(), icon: 'school', color: '#10b981', bg: '#d1fae5' },
+        { label: 'Laporan', value: dashboardStats.totalReports.toString(), icon: 'alert-circle', color: '#ef4444', bg: '#fee2e2' },
     ];
 
     const showFeatureAlert = (featureName) => {

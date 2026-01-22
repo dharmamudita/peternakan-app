@@ -23,7 +23,7 @@ import Animated, { FadeInDown, FadeInUp, FadeInRight } from 'react-native-reanim
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
-import { animalApi, productApi, courseApi } from '../../services/api';
+import { animalApi, productApi, courseApi, statsApi } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -44,34 +44,31 @@ const HomeScreen = ({ navigation }) => {
             const loadData = async () => {
                 try {
                     // Fetch all data concurrently
-                    const [statsRes, animalsRes, productsRes, coursesRes, notifRes] = await Promise.allSettled([
-                        animalApi.getStats(),
+                    const [userStatsRes, animalsRes, coursesRes, notifRes] = await Promise.allSettled([
+                        statsApi.getUserStats(),
                         animalApi.getMyAnimals({ limit: 5 }),
-                        productApi.getAll({ limit: 1 }),
                         courseApi.getEnrolled({ limit: 3 }),
                         require('../../services/api').notificationApi.getAll()
                     ]);
 
-                    // 1. Process Animal Stats & List
-                    if (statsRes.status === 'fulfilled') {
-                        const statsData = statsRes.value.data || statsRes.value || {};
-                        setDashboardData(prev => ({ ...prev, totalAnimals: statsData.total || 0 }));
+                    // 1. Process Stats
+                    if (userStatsRes.status === 'fulfilled') {
+                        const stats = userStatsRes.value.data || userStatsRes.value || {};
+                        setDashboardData(prev => ({
+                            ...prev,
+                            totalAnimals: stats.totalAnimals || 0,
+                            totalCourses: stats.totalCourses || 0,
+                            totalProducts: stats.totalProducts || 0, // Using user's products
+                        }));
                     }
+
+                    // 2. Process Lists (Animals & Courses)
                     if (animalsRes.status === 'fulfilled') {
                         setMyAnimals(animalsRes.value.data || []);
                     }
-
-                    // 2. Process Products
-                    if (productsRes.status === 'fulfilled') {
-                        const wrapper = productsRes.value.data || productsRes.value || {};
-                        setDashboardData(prev => ({ ...prev, totalProducts: wrapper.pagination?.total || 0 }));
-                    }
-
-                    // 3. Process Courses
                     if (coursesRes.status === 'fulfilled') {
                         const coursesData = coursesRes.value.data || [];
                         setMyCourses(coursesData);
-                        setDashboardData(prev => ({ ...prev, totalCourses: coursesRes.value.pagination?.total || coursesData.length }));
                     }
 
                     // 4. Process Notifications
@@ -103,8 +100,8 @@ const HomeScreen = ({ navigation }) => {
     };
 
     const stats = [
-        { label: 'Total Hewan', value: dashboardData.totalAnimals.toString(), icon: 'paw', color: '#964b00', target: 'FarmTab' },
-        { label: 'Produk Aktif', value: dashboardData.totalProducts.toString(), icon: 'cube', color: '#7c3f06', target: 'MarketTab' },
+        { label: 'Hewan', value: dashboardData.totalAnimals.toString(), icon: 'paw', color: '#964b00', target: 'FarmTab' },
+        { label: 'Produk', value: dashboardData.totalProducts.toString(), icon: 'cube', color: '#7c3f06', target: 'MarketTab' },
         { label: 'Kursus', value: dashboardData.totalCourses.toString(), icon: 'book', color: '#b87333', target: 'EducationTab' },
     ];
 

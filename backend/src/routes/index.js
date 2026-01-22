@@ -64,5 +64,6 @@ router.use('/notifications', notificationRoutes);
 router.use('/reports', require('./reportRoutes'));
 router.use('/shops', require('./shopRoutes'));
 router.use('/seller', require('./sellerRoutes'));
+router.use('/stats', require('./statsRoutes'));
 
 module.exports = router;

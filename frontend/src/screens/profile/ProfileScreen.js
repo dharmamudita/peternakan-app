@@ -11,11 +11,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
-import { animalApi, courseApi } from '../../services/api';
-
-const { width } = Dimensions.get('window');
+import { statsApi } from '../../services/api';
 
 const ProfileScreen = ({ navigation }) => {
+    // ... existing hooks
     const insets = useSafeAreaInsets();
     const { user, logout } = useAuth();
     const [notifications, setNotifications] = React.useState(true);
@@ -27,24 +26,16 @@ const ProfileScreen = ({ navigation }) => {
 
     useFocusEffect(
         React.useCallback(() => {
-            console.log('ProfileScreen: Loading stats...');
             const loadStats = async () => {
                 try {
-                    // Load Animals Count
-                    const animalRes = await animalApi.getStats();
-                    const animalCount = (animalRes.data || animalRes)?.total || 0;
+                    const response = await statsApi.getUserStats();
+                    const data = response.data || response;
 
-                    // Load Courses Count (Active/Enrolled)
-                    const courseRes = await courseApi.getEnrolled({ limit: 1 });
-                    const courseCount = (courseRes.pagination || courseRes.data || courseRes)?.total || 0;
-
-                    // Orders (Placeholder for now)
-
-                    setProfileStats(prev => ({
-                        ...prev,
-                        animals: animalCount,
-                        courses: courseCount
-                    }));
+                    setProfileStats({
+                        animals: data.totalAnimals || 0,
+                        orders: data.totalOrders || 0,
+                        courses: data.totalCourses || 0
+                    });
                 } catch (e) {
                     console.log('Profile Stats Error:', e);
                 }

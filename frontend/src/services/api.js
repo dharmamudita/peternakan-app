@@ -258,4 +258,10 @@ export const userApi = {
     delete: (id) => api.delete(`/auth/users/${id}`),
 };
 
+// Stats endpoints (Global/Admin)
+export const statsApi = {
+    getUserStats: () => api.get('/stats/user'),
+    getAdminStats: () => api.get('/stats/admin'),
+};
+
 export default api;
