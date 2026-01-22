@@ -129,6 +129,12 @@ const AdminDashboardScreen = ({ navigation }) => {
                         onPress={() => navigation.navigate('EducationManagement')}
                     />
                     <MenuCard
+                        title="Kelola Penjual"
+                        subtitle="Verifikasi & manajemen toko"
+                        icon="storefront-outline"
+                        onPress={() => showFeatureAlert('Kelola Penjual')}
+                    />
+                    <MenuCard
                         title="Verifikasi Produk"
                         subtitle="Persetujuan produk penjual"
                         icon="checkmark-done-circle-outline"

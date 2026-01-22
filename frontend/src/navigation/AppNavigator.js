@@ -43,6 +43,10 @@ import {
     EducationManagementScreen,
     BroadcastScreen,
     NotificationScreen,
+    ProductDetailScreen,
+    OrderHistoryScreen,
+    SellerProfileScreen,
+    CartScreen,
 } from '../screens';
 
 const Stack = createStackNavigator();
@@ -197,6 +201,10 @@ const AppNavigator = () => {
                         <Stack.Screen name="EducationManagement" component={EducationManagementScreen} />
                         <Stack.Screen name="Broadcast" component={BroadcastScreen} />
                         <Stack.Screen name="Notification" component={NotificationScreen} />
+                        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+                        <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+                        <Stack.Screen name="SellerProfile" component={SellerProfileScreen} />
+                        <Stack.Screen name="Cart" component={CartScreen} />
                     </>
                 ) : (
                     <Stack.Screen name="Auth" component={AuthStack} />

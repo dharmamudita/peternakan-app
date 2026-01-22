@@ -12,6 +12,7 @@ const EducationManagementScreen = ({ navigation }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [quizModalVisible, setQuizModalVisible] = useState(false);
+    const [lessonModalVisible, setLessonModalVisible] = useState(false);
 
     // Form State
     const [form, setForm] = useState({
@@ -23,6 +24,7 @@ const EducationManagementScreen = ({ navigation }) => {
         category: 'umum',
         price: '0',
         quiz: [],
+        lessons: [],
     });
     const [isEditing, setIsEditing] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -116,8 +118,9 @@ const EducationManagementScreen = ({ navigation }) => {
             fetchData();
             Alert.alert('Sukses', isEditing ? 'Data diperbarui' : 'Data ditambahkan');
         } catch (error) {
-            console.error(error);
-            Alert.alert('Error', 'Gagal menyimpan data');
+            console.error('Save failed:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Terjadi kesalahan saat menyimpan data';
+            Alert.alert('Gagal', errorMessage);
         } finally {
             setSubmitLoading(false);
         }
@@ -136,6 +139,7 @@ const EducationManagementScreen = ({ navigation }) => {
                 category: item.category || 'umum',
                 price: item.price ? item.price.toString() : '0',
                 quiz: item.quiz || [],
+                lessons: item.lessons || [],
             });
         } else {
             resetForm();
@@ -168,6 +172,25 @@ const EducationManagementScreen = ({ navigation }) => {
         setForm(prev => ({ ...prev, quiz: newQuiz }));
     };
 
+    // Lesson Handlers
+    const addLesson = () => {
+        setForm(prev => ({
+            ...prev,
+            lessons: [...(prev.lessons || []), { title: '', duration: '0', content: '' }]
+        }));
+    };
+
+    const updateLesson = (index, field, value) => {
+        const newLessons = [...(form.lessons || [])];
+        newLessons[index] = { ...newLessons[index], [field]: value };
+        setForm(prev => ({ ...prev, lessons: newLessons }));
+    };
+
+    const removeLesson = (index) => {
+        const newLessons = form.lessons.filter((_, i) => i !== index);
+        setForm(prev => ({ ...prev, lessons: newLessons }));
+    };
+
     const resetForm = () => {
         setIsEditing(false);
         setEditId(null);
@@ -179,7 +202,8 @@ const EducationManagementScreen = ({ navigation }) => {
             content: '',
             category: 'umum',
             price: '0',
-            quiz: [], // Array of { question, options: [a,b,c,d], answer: 0-3 }
+            quiz: [],
+            lessons: [],
         });
     };
 
@@ -193,7 +217,16 @@ const EducationManagementScreen = ({ navigation }) => {
                 <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
                 <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
                 <Text style={styles.cardDate}>
-                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                    {(() => {
+                        if (!item.createdAt) return '-';
+                        try {
+                            const date = item.createdAt._seconds
+                                ? new Date(item.createdAt._seconds * 1000)
+                                : new Date(item.createdAt);
+                            if (isNaN(date.getTime())) return '-';
+                            return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                        } catch { return '-'; }
+                    })()}
                 </Text>
                 <View style={styles.cardFooter}>
                     <Text style={styles.cardBadge}>{activeTab === 'material' ? item.type : (item.isFree ? 'Gratis' : `Rp ${item.price}`)}</Text>
@@ -312,14 +345,23 @@ const EducationManagementScreen = ({ navigation }) => {
                             )}
 
                             {activeTab === 'course' && (
-                                <>
+                                <View style={{ gap: 10, marginTop: 10 }}>
                                     <TouchableOpacity
-                                        style={[styles.input, { backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginTop: 10, borderStyle: 'solid' }]}
+                                        style={[styles.input, { backgroundColor: '#fff', borderColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginTop: 10 }]}
+                                        onPress={() => setLessonModalVisible(true)}
+                                    >
+                                        <Text style={{ color: COLORS.primary, fontWeight: 'bold' }}>
+                                            Kelola Modul Pelajaran ({form.lessons?.length || 0})
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.input, { backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', borderStyle: 'solid' }]}
                                         onPress={() => setQuizModalVisible(true)}
                                     >
                                         <Text style={{ color: '#fff', fontWeight: 'bold' }}>Kelola Soal Kuis ({form.quiz.length})</Text>
                                     </TouchableOpacity>
-                                </>
+                                </View>
                             )}
 
                             <TouchableOpacity
@@ -384,6 +426,59 @@ const EducationManagementScreen = ({ navigation }) => {
                                         />
                                     </View>
                                 ))}
+                            </View>
+                        ))}
+                        <View style={{ height: 100 }} />
+                    </ScrollView>
+                </View>
+            </Modal>
+
+            {/* Lesson Management Modal */}
+            <Modal visible={lessonModalVisible} animationType="slide">
+                <View style={styles.container}>
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => setLessonModalVisible(false)} style={styles.backBtn}>
+                            <Ionicons name="arrow-back" size={24} color="#5d3a1a" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Kelola Modul Pelajaran</Text>
+                        <TouchableOpacity onPress={addLesson} style={styles.backBtn}>
+                            <Ionicons name="add" size={24} color={COLORS.primary} />
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView contentContainerStyle={{ padding: 20 }}>
+                        {(!form.lessons || form.lessons.length === 0) && (
+                            <Text style={styles.emptyText}>Belum ada modul pelajaran. Tekan + untuk menambah.</Text>
+                        )}
+                        {form.lessons?.map((l, i) => (
+                            <View key={i} style={styles.quizCard}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                                    <Text style={{ fontWeight: 'bold' }}>Modul {i + 1}</Text>
+                                    <TouchableOpacity onPress={() => removeLesson(i)}>
+                                        <Ionicons name="trash" size={20} color="red" />
+                                    </TouchableOpacity>
+                                </View>
+                                <TextInput
+                                    style={[styles.input, { marginBottom: 10 }]}
+                                    placeholder="Judul Modul..."
+                                    value={l.title}
+                                    onChangeText={t => updateLesson(i, 'title', t)}
+                                />
+                                <View style={{ flexDirection: 'row', gap: 10 }}>
+                                    <TextInput
+                                        style={[styles.input, { flex: 1, marginBottom: 10 }]}
+                                        placeholder="Durasi (menit)"
+                                        keyboardType="numeric"
+                                        value={l?.duration?.toString()}
+                                        onChangeText={t => updateLesson(i, 'duration', t)}
+                                    />
+                                </View>
+                                <TextInput
+                                    style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
+                                    placeholder="Deskripsi / Konten Singkat..."
+                                    multiline
+                                    value={l.content}
+                                    onChangeText={t => updateLesson(i, 'content', t)}
+                                />
                             </View>
                         ))}
                         <View style={{ height: 100 }} />

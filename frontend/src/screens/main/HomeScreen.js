@@ -11,6 +11,10 @@ import {
     ScrollView,
     TouchableOpacity,
     Dimensions,
+
+    Image,
+    Alert,
+    Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,67 +36,56 @@ const HomeScreen = ({ navigation }) => {
         totalCourses: 0,
     });
     const [unreadCount, setUnreadCount] = useState(0);
+    const [myCourses, setMyCourses] = useState([]);
+    const [myAnimals, setMyAnimals] = useState([]);
 
     useFocusEffect(
         useCallback(() => {
-            const loadDashboardData = async () => {
-                // ... (Existing stats loading)
-
-                // 4. Load Notifications Count
+            const loadData = async () => {
                 try {
-                    const notifApi = require('../../services/api').notificationApi;
-                    const notifRes = await notifApi.getAll();
-                    const notifs = notifRes.data || [];
-                    const unread = notifs.filter(n => !n.isRead).length;
-                    setUnreadCount(unread);
+                    // Fetch all data concurrently
+                    const [statsRes, animalsRes, productsRes, coursesRes, notifRes] = await Promise.allSettled([
+                        animalApi.getStats(),
+                        animalApi.getMyAnimals({ limit: 5 }),
+                        productApi.getAll({ limit: 1 }),
+                        courseApi.getEnrolled({ limit: 3 }),
+                        require('../../services/api').notificationApi.getAll()
+                    ]);
+
+                    // 1. Process Animal Stats & List
+                    if (statsRes.status === 'fulfilled') {
+                        const statsData = statsRes.value.data || statsRes.value || {};
+                        setDashboardData(prev => ({ ...prev, totalAnimals: statsData.total || 0 }));
+                    }
+                    if (animalsRes.status === 'fulfilled') {
+                        setMyAnimals(animalsRes.value.data || []);
+                    }
+
+                    // 2. Process Products
+                    if (productsRes.status === 'fulfilled') {
+                        const wrapper = productsRes.value.data || productsRes.value || {};
+                        setDashboardData(prev => ({ ...prev, totalProducts: wrapper.pagination?.total || 0 }));
+                    }
+
+                    // 3. Process Courses
+                    if (coursesRes.status === 'fulfilled') {
+                        const coursesData = coursesRes.value.data || [];
+                        setMyCourses(coursesData);
+                        setDashboardData(prev => ({ ...prev, totalCourses: coursesRes.value.pagination?.total || coursesData.length }));
+                    }
+
+                    // 4. Process Notifications
+                    if (notifRes.status === 'fulfilled') {
+                        const notifs = notifRes.value.data || [];
+                        setUnreadCount(notifs.filter(n => !n.isRead).length);
+                    }
+
                 } catch (error) {
-                    console.log('Home - Notif Error:', error.message);
+                    console.log('Home - Bulk Load Error:', error);
                 }
             };
-            loadDashboardData();
-        }, [])
-    );
 
-    useFocusEffect(
-        useCallback(() => {
-            const loadDashboardData = async () => {
-                // 1. Load Animal Stats (Priority)
-                try {
-                    const statsRes = await animalApi.getStats();
-                    const statsData = statsRes.data || statsRes || {};
-                    setDashboardData(prev => ({
-                        ...prev,
-                        totalAnimals: statsData.total || 0
-                    }));
-                } catch (error) {
-                    console.log('Home - Animal Stats Error:', error.message);
-                }
-
-                // 2. Load Products (Optional)
-                try {
-                    const productsRes = await productApi.getAll({ limit: 1 });
-                    const productsWrapper = productsRes.data || productsRes || {};
-                    setDashboardData(prev => ({
-                        ...prev,
-                        totalProducts: productsWrapper.pagination?.total || 0
-                    }));
-                } catch (error) {
-                    console.log('Home - Product API Error:', error.message);
-                }
-
-                // 3. Load Courses (Optional)
-                try {
-                    const coursesRes = await courseApi.getAll({ limit: 1 });
-                    const coursesWrapper = coursesRes.data || coursesRes || {};
-                    setDashboardData(prev => ({
-                        ...prev,
-                        totalCourses: coursesWrapper.pagination?.total || 0
-                    }));
-                } catch (error) {
-                    console.log('Home - Course API Error:', error.message);
-                }
-            };
-            loadDashboardData();
+            loadData();
         }, [])
     );
 
@@ -110,9 +103,9 @@ const HomeScreen = ({ navigation }) => {
     };
 
     const stats = [
-        { label: 'Total Hewan', value: dashboardData.totalAnimals.toString(), icon: 'paw', color: '#964b00' },
-        { label: 'Produk Aktif', value: dashboardData.totalProducts.toString(), icon: 'cube', color: '#7c3f06' },
-        { label: 'Kursus', value: dashboardData.totalCourses.toString(), icon: 'book', color: '#b87333' },
+        { label: 'Total Hewan', value: dashboardData.totalAnimals.toString(), icon: 'paw', color: '#964b00', target: 'FarmTab' },
+        { label: 'Produk Aktif', value: dashboardData.totalProducts.toString(), icon: 'cube', color: '#7c3f06', target: 'MarketTab' },
+        { label: 'Kursus', value: dashboardData.totalCourses.toString(), icon: 'book', color: '#b87333', target: 'EducationTab' },
     ];
 
     const menuItems = [
@@ -156,14 +149,14 @@ const HomeScreen = ({ navigation }) => {
             title: 'Tambah Hewan',
             icon: 'add-circle',
             color: '#964b00',
-            onPress: () => navigation.navigate('FarmTab', { action: 'add_animal' })
+            onPress: () => navigation.navigate('FarmTab', { openAddModal: true })
         },
         {
             id: 2,
             title: 'Catat Kesehatan',
             icon: 'medical',
             color: '#7c3f06',
-            onPress: () => navigation.navigate('FarmTab')
+            onPress: () => Platform.OS === 'web' ? window.alert('Fitur akan segera hadir!') : Alert.alert('Info', 'Fitur Catat Kesehatan akan segera hadir!')
         },
     ];
 
@@ -184,9 +177,6 @@ const HomeScreen = ({ navigation }) => {
                             <Text style={styles.userName}>{user?.displayName || 'Peternak'}</Text>
                         </View>
                         <View style={styles.headerRight}>
-                            <TouchableOpacity style={styles.iconButton}>
-                                <Ionicons name="search-outline" size={22} color="#374151" />
-                            </TouchableOpacity>
                             <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Notification')}>
                                 <Ionicons name="notifications-outline" size={22} color="#374151" />
                                 {unreadCount > 0 && (
@@ -219,13 +209,18 @@ const HomeScreen = ({ navigation }) => {
 
                         <View style={styles.statsRow}>
                             {stats.map((stat, index) => (
-                                <View key={index} style={styles.statItem}>
+                                <TouchableOpacity
+                                    key={index}
+                                    style={styles.statItem}
+                                    onPress={() => navigation.navigate(stat.target)}
+                                    activeOpacity={0.7}
+                                >
                                     <View style={styles.statIconBg}>
                                         <Ionicons name={stat.icon} size={18} color="#ffffff" />
                                     </View>
                                     <Text style={styles.statValue}>{stat.value}</Text>
                                     <Text style={styles.statLabel}>{stat.label}</Text>
-                                </View>
+                                </TouchableOpacity>
                             ))}
                         </View>
                     </LinearGradient>
@@ -283,34 +278,76 @@ const HomeScreen = ({ navigation }) => {
                     </View>
                 </Animated.View>
 
-                {/* Recent Activities */}
-                <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Aktivitas Terbaru</Text>
-                        <TouchableOpacity>
-                            <Text style={styles.seeAll}>Lihat Semua</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <View style={styles.activitiesList}>
-                        {activities.map((activity, index) => (
-                            <Animated.View
-                                key={activity.id}
-                                entering={FadeInUp.delay(index * 100).duration(400)}
-                            >
-                                <TouchableOpacity style={styles.activityCard} activeOpacity={0.9}>
-                                    <View style={[styles.activityIcon, { backgroundColor: activity.color + '15' }]}>
-                                        <Ionicons name={activity.icon} size={20} color={activity.color} />
+
+
+                {/* My Courses Section */}
+                {myCourses.length > 0 && (
+                    <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Lanjutkan Belajar</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('EducationTab')}>
+                                <Text style={styles.seeAll}>Lihat Semua</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 20 }}>
+                            {myCourses.map((course, index) => (
+                                <TouchableOpacity
+                                    key={course.id || index}
+                                    style={styles.courseCard}
+                                    onPress={() => navigation.navigate('CourseDetail', { courseId: course.courseId || course.id })}
+                                >
+                                    <Image
+                                        source={{ uri: course.thumbnail || 'https://via.placeholder.com/150' }}
+                                        style={styles.courseImage}
+                                    />
+                                    <View style={styles.courseContent}>
+                                        <Text style={styles.courseTitle} numberOfLines={2}>{course.title}</Text>
+                                        <View style={styles.progressBar}>
+                                            <View style={[styles.progressFill, { width: `${course.progressPercentage || 0}%` }]} />
+                                        </View>
+                                        <Text style={styles.courseProgressText}>{course.progressPercentage || 0}% Selesai</Text>
                                     </View>
-                                    <View style={styles.activityContent}>
-                                        <Text style={styles.activityTitle}>{activity.title}</Text>
-                                        <Text style={styles.activityTime}>{activity.time}</Text>
-                                    </View>
-                                    <Ionicons name="chevron-forward" size={18} color="#d1d5db" />
                                 </TouchableOpacity>
-                            </Animated.View>
-                        ))}
-                    </View>
-                </Animated.View>
+                            ))}
+                        </ScrollView>
+                    </Animated.View>
+                )}
+
+                {/* My Animals Section */}
+                {myAnimals.length > 0 && (
+                    <Animated.View entering={FadeInDown.duration(500).delay(500)} style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Hewan Ternak</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('FarmTab')}>
+                                <Text style={styles.seeAll}>Lihat Semua</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.activitiesList}>
+                            {myAnimals.map((animal, index) => (
+                                <Animated.View
+                                    key={animal.id}
+                                    entering={FadeInUp.delay(index * 100).duration(400)}
+                                >
+                                    <TouchableOpacity
+                                        style={styles.activityCard}
+                                        activeOpacity={0.9}
+                                        onPress={() => navigation.navigate('AnimalDetail', { animalId: animal.id })}
+                                    >
+                                        <Image
+                                            source={{ uri: animal.photoUrl || 'https://via.placeholder.com/150' }}
+                                            style={[styles.activityIcon, { backgroundColor: '#f0f0f0', borderRadius: 12 }]}
+                                        />
+                                        <View style={styles.activityContent}>
+                                            <Text style={styles.activityTitle}>{animal.name}</Text>
+                                            <Text style={styles.activityTime}>{animal.category} • {animal.status}</Text>
+                                        </View>
+                                        <Ionicons name="chevron-forward" size={18} color="#d1d5db" />
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            ))}
+                        </View>
+                    </Animated.View>
+                )}
 
                 <View style={{ height: 100 }} />
             </ScrollView>
@@ -567,6 +604,14 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#9ca3af',
     },
+    // New Styles for Course & Animal Lists
+    courseCard: { width: 160, backgroundColor: '#ffffff', borderRadius: 16, padding: 10, ...SHADOWS.small, borderWidth: 1, borderColor: '#f0ebe3' },
+    courseImage: { width: '100%', height: 100, borderRadius: 12, marginBottom: 8, backgroundColor: '#f3f4f6' },
+    courseContent: { gap: 4 },
+    courseTitle: { fontSize: 13, fontWeight: '700', color: '#111827', height: 36 },
+    progressBar: { height: 4, backgroundColor: '#f3f4f6', borderRadius: 2, marginTop: 4 },
+    progressFill: { height: '100%', backgroundColor: '#b87333', borderRadius: 2 },
+    courseProgressText: { fontSize: 10, color: '#9ca3af', marginTop: 2 },
 });
 
 export default HomeScreen;

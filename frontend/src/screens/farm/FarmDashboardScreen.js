@@ -32,6 +32,7 @@ const FarmDashboardScreen = ({ navigation, route }) => {
     const [newAnimal, setNewAnimal] = useState({
         name: '', type: 'CATTLE', breed: '', gender: 'male', weight: '', notes: '', birthDate: '', quantity: '1'
     });
+    const [searchQuery, setSearchQuery] = useState(''); // Search State
     const [saving, setSaving] = useState(false);
 
     const filters = [
@@ -82,10 +83,10 @@ const FarmDashboardScreen = ({ navigation, route }) => {
             loadData();
 
             // Check for Quick Actions from Home Screen
-            if (route.params?.action === 'add_animal') {
+            if (route.params?.action === 'add_animal' || route.params?.openAddModal) {
                 setModalVisible(true);
                 // Clear param after use
-                navigation.setParams({ action: null });
+                navigation.setParams({ action: null, openAddModal: null });
             }
         }, [loadData, route.params])
     );
@@ -152,8 +153,9 @@ const FarmDashboardScreen = ({ navigation, route }) => {
     };
 
     const filteredAnimals = animals.filter(animal => {
-        if (selectedFilter === 'all') return true;
-        return animal.healthStatus === selectedFilter;
+        const matchesStatus = selectedFilter === 'all' || animal.healthStatus === selectedFilter;
+        const matchesSearch = animal.name.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesStatus && matchesSearch;
     });
 
     const statCards = [
@@ -192,6 +194,18 @@ const FarmDashboardScreen = ({ navigation, route }) => {
                         </TouchableOpacity>
                     </View>
                 </Animated.View>
+
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
+                    <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Cari hewan..."
+                        placeholderTextColor="#9ca3af"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                </View>
 
                 {/* Stats */}
                 <Animated.View entering={FadeInDown.duration(500).delay(100)} style={styles.statsSection}>
@@ -537,6 +551,27 @@ const styles = StyleSheet.create({
     submitButtonGradient: { paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
     submitButtonText: { fontSize: 16, fontWeight: '700', color: '#fff' },
     buttonDisabled: { opacity: 0.7 },
+
+    // Search Styles
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#faf8f5',
+        marginHorizontal: SIZES.padding,
+        marginBottom: 16,
+        paddingHorizontal: 16,
+        height: 50,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
+    },
+    searchIcon: { marginRight: 10 },
+    searchInput: {
+        flex: 1,
+        height: '100%',
+        color: '#111827',
+        fontSize: 15,
+    },
 });
 
 export default FarmDashboardScreen;

@@ -15,6 +15,7 @@ import {
     Modal,
     Alert,
     Platform,
+    RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +36,9 @@ const CourseDetailScreen = ({ navigation, route }) => {
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [quizSubmitted, setQuizSubmitted] = useState(false);
     const [quizScore, setQuizScore] = useState(0);
+    const [userProgress, setUserProgress] = useState(null);
+    const [savingQuiz, setSavingQuiz] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         fetchCourse();
@@ -43,8 +47,13 @@ const CourseDetailScreen = ({ navigation, route }) => {
     const fetchCourse = async () => {
         try {
             setLoading(true);
-            const response = await courseApi.getById(courseId);
-            setCourse(response.data || response);
+            const [courseRes, progressRes] = await Promise.all([
+                courseApi.getById(courseId),
+                courseApi.getProgress(courseId).catch(() => ({ data: null }))
+            ]);
+
+            setCourse(courseRes.data || courseRes);
+            setUserProgress(progressRes.data || null);
         } catch (err) {
             console.error('Error fetching course:', err);
             setError(err.message || 'Gagal memuat kursus');
@@ -53,12 +62,18 @@ const CourseDetailScreen = ({ navigation, route }) => {
         }
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
+    const formatDate = (date) => {
+        if (!date) return '';
         try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return '';
-            return date.toLocaleDateString('id-ID', {
+            let dateObj;
+            if (date._seconds) {
+                dateObj = new Date(date._seconds * 1000);
+            } else {
+                dateObj = new Date(date);
+            }
+            if (isNaN(dateObj.getTime())) return '';
+
+            return dateObj.toLocaleDateString('id-ID', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
@@ -109,7 +124,13 @@ const CourseDetailScreen = ({ navigation, route }) => {
         }
     };
 
-    const submitQuiz = () => {
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await fetchCourse();
+        setRefreshing(false);
+    }, [courseId]);
+
+    const submitQuiz = async () => {
         let correctCount = 0;
         course.quiz.forEach((question, index) => {
             // Convert both to numbers to ensure proper comparison
@@ -124,6 +145,38 @@ const CourseDetailScreen = ({ navigation, route }) => {
         const score = Math.round((correctCount / course.quiz.length) * 100);
         setQuizScore(score);
         setQuizSubmitted(true);
+
+        // Optimistic Update: Update UI immediately
+        if (score >= 70) {
+            setUserProgress(prev => ({
+                ...prev,
+                quizScores: {
+                    ...(prev?.quizScores || {}),
+                    'main_quiz': { score, completedAt: new Date().toISOString() }
+                },
+                progressPercentage: 100
+            }));
+        }
+
+        // Save to backend
+        try {
+            setSavingQuiz(true);
+            // Use a specific ID for the course quiz, e.g., 'main_quiz'
+            await courseApi.saveQuizScore(courseId, 'main_quiz', score);
+
+            // Refresh real data silently
+            const progressRes = await courseApi.getProgress(courseId);
+            setUserProgress(progressRes.data || null);
+
+            if (score >= 70) {
+                showAlert('Selamat!', 'Anda telah lulus kuis ini.');
+            }
+        } catch (err) {
+            console.error('Error saving quiz score:', err);
+            showAlert('Info', 'Nilai tersimpan lokal, tapi gagal sinkron ke server.');
+        } finally {
+            setSavingQuiz(false);
+        }
     };
 
     const closeQuiz = () => {
@@ -173,6 +226,9 @@ const CourseDetailScreen = ({ navigation, route }) => {
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+                }
             >
                 {/* Thumbnail */}
                 {course?.thumbnail ? (
@@ -260,18 +316,37 @@ const CourseDetailScreen = ({ navigation, route }) => {
                         <Text style={styles.sectionTitle}>Kuis</Text>
                         <View style={styles.quizCard}>
                             <View style={styles.quizInfo}>
-                                <Ionicons name="help-circle" size={32} color="#964b00" />
+                                <Ionicons
+                                    name={userProgress?.quizScores?.['main_quiz']?.score >= 70 ? "checkmark-circle" : "help-circle"}
+                                    size={32}
+                                    color={userProgress?.quizScores?.['main_quiz']?.score >= 70 ? "#10b981" : "#964b00"}
+                                />
                                 <View style={styles.quizTextContainer}>
                                     <Text style={styles.quizTitle}>Uji Pemahaman Anda</Text>
                                     <Text style={styles.quizSubtitle}>
                                         {course.quiz.length} soal tersedia
+                                        {userProgress?.quizScores?.['main_quiz'] && (
+                                            <Text style={{ color: userProgress.quizScores['main_quiz'].score >= 70 ? '#10b981' : '#f59e0b' }}>
+                                                {' • '}Nilai: {userProgress.quizScores['main_quiz'].score}
+                                            </Text>
+                                        )}
                                     </Text>
                                 </View>
                             </View>
-                            <TouchableOpacity style={styles.startQuizButton} onPress={startQuiz}>
-                                <Text style={styles.startQuizText}>Mulai Kuis</Text>
-                                <Ionicons name="arrow-forward" size={18} color="#fff" />
-                            </TouchableOpacity>
+
+                            {userProgress?.quizScores?.['main_quiz']?.score >= 70 ? (
+                                <View style={styles.completedBadge}>
+                                    <Text style={styles.completedText}>Selesai</Text>
+                                    <Ionicons name="checkmark" size={16} color="#059669" />
+                                </View>
+                            ) : (
+                                <TouchableOpacity style={styles.startQuizButton} onPress={startQuiz}>
+                                    <Text style={styles.startQuizText}>
+                                        {userProgress?.quizScores?.['main_quiz'] ? 'Ulangi Kuis' : 'Mulai Kuis'}
+                                    </Text>
+                                    <Ionicons name="arrow-forward" size={18} color="#fff" />
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
                 )}
@@ -726,6 +801,21 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 32,
         borderRadius: 12,
+    },
+    completedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#d1fae5',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        alignSelf: 'flex-start',
+    },
+    completedText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#059669',
     },
     submitButtonDisabled: {
         backgroundColor: '#d1d5db',

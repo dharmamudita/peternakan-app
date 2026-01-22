@@ -37,7 +37,8 @@ class Course {
         this.publishedAt = data.publishedAt || null;
         this.createdAt = data.createdAt || new Date();
         this.updatedAt = data.updatedAt || new Date();
-        this.quiz = data.quiz || []; // Tambahkan Quiz
+        this.quiz = data.quiz || [];
+        this.lessons = data.lessons || []; // Tambahkan Lessons
     }
 
     toJSON() {
@@ -71,7 +72,8 @@ class Course {
             publishedAt: this.publishedAt,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
-            quiz: this.quiz, // Include Quiz
+            quiz: this.quiz,
+            lessons: this.lessons, // Include Lessons
         };
     }
 

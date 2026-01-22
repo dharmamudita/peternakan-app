@@ -47,6 +47,7 @@ router.get('/courses/slug/:slug', educationController.getCourseBySlug);
 router.post('/courses/:courseId/enroll', educationController.enrollCourse);
 router.get('/courses/:courseId/progress', educationController.getCourseProgress);
 router.post('/courses/:courseId/lessons/:lessonId/complete', educationController.completeLesson);
+router.post('/courses/:courseId/quizzes/:quizId/score', educationController.saveQuizScore);
 
 // Admin/Instructor Only Routes for Courses
 router.post('/courses', adminOnly, educationController.createCourse);

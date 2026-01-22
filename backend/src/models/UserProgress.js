@@ -161,14 +161,30 @@ class UserProgress {
     }
 
     static async saveQuizScore(userId, courseId, quizId, score) {
-        const progress = await UserProgress.getByUserAndCourse(userId, courseId);
-        if (!progress) return null;
+        let progress = await UserProgress.getByUserAndCourse(userId, courseId);
+
+        // Auto-enroll if not enrolled yet
+        if (!progress) {
+            progress = await UserProgress.enroll(userId, courseId);
+        }
 
         const quizScores = progress.quizScores || {};
-        quizScores[quizId] = score;
+        quizScores[quizId] = {
+            score,
+            completedAt: new Date(),
+            attempts: (quizScores[quizId]?.attempts || 0) + 1,
+        };
+
+        // Calculate progress: Quiz completed = 100% for now (can be extended for multiple lessons)
+        const progressPercentage = score >= 70 ? 100 : Math.max(progress.progressPercentage || 0, 50);
+        const isCompleted = score >= 70;
 
         await db.collection(COLLECTIONS.USER_PROGRESS).doc(progress.id).update({
             quizScores,
+            progressPercentage,
+            isCompleted,
+            completedAt: isCompleted ? new Date() : null,
+            lastAccessedAt: new Date(),
             updatedAt: new Date(),
         });
 

@@ -10,6 +10,8 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
+import { animalApi, courseApi } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -17,10 +19,44 @@ const ProfileScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
     const { user, logout } = useAuth();
     const [notifications, setNotifications] = React.useState(true);
+    const [profileStats, setProfileStats] = React.useState({
+        animals: 0,
+        orders: 0,
+        courses: 0
+    });
+
+    useFocusEffect(
+        React.useCallback(() => {
+            console.log('ProfileScreen: Loading stats...');
+            const loadStats = async () => {
+                try {
+                    // Load Animals Count
+                    const animalRes = await animalApi.getStats();
+                    const animalCount = (animalRes.data || animalRes)?.total || 0;
+
+                    // Load Courses Count (Active/Enrolled)
+                    const courseRes = await courseApi.getEnrolled({ limit: 1 });
+                    const courseCount = (courseRes.pagination || courseRes.data || courseRes)?.total || 0;
+
+                    // Orders (Placeholder for now)
+
+                    setProfileStats(prev => ({
+                        ...prev,
+                        animals: animalCount,
+                        courses: courseCount
+                    }));
+                } catch (e) {
+                    console.log('Profile Stats Error:', e);
+                }
+            };
+            loadStats();
+        }, [])
+    );
 
     const handleLogout = () => { logout(); };
 
-    const isSeller = user?.role === 'seller';
+    // Admin juga dianggap sebagai Seller (bisa jualan)
+    const isSeller = user?.role === 'seller' || user?.role === 'admin';
 
     const showFeatureAlert = (featureName) => {
         if (Platform.OS === 'web') {
@@ -49,9 +85,9 @@ const ProfileScreen = ({ navigation }) => {
     };
 
     const stats = [
-        { label: 'Hewan', value: '12', icon: 'paw', color: '#964b00' },
-        { label: 'Pesanan', value: '5', icon: 'cart', color: '#7c3f06' },
-        { label: 'Kursus', value: '3', icon: 'book', color: '#b87333' },
+        { label: 'Hewan', value: profileStats.animals.toString(), icon: 'paw', color: '#964b00' },
+        { label: 'Pesanan', value: profileStats.orders.toString(), icon: 'cart', color: '#7c3f06' },
+        { label: 'Kursus', value: profileStats.courses.toString(), icon: 'book', color: '#b87333' },
     ];
 
     const SUPER_ADMIN_EMAIL = 'dharmamudita404@gmail.com';
@@ -65,16 +101,23 @@ const ProfileScreen = ({ navigation }) => {
             ]
         }] : []),
 
-        // Hide Business/Store menu for Admin
-        ...(!isSuperAdmin ? [{
+        // Menu Toko / Bisnis (Admin juga bisa akses)
+        {
             title: isSeller ? 'Toko Saya' : 'Bisnis',
             items: isSeller ? [
                 { icon: 'storefront-outline', label: 'Dashboard Toko', color: '#964b00', action: () => navigation.navigate('SellerDashboard') },
             ] : [
                 { icon: 'id-card-outline', label: 'Daftar sebagai Penjual', color: '#964b00', action: () => navigation.navigate('SellerRegistration') },
             ]
-        }] : []),
+        },
 
+        {
+            title: 'Aktivitas Saya',
+            items: [
+                { icon: 'receipt-outline', label: 'Riwayat Pembelian', color: '#964b00', action: () => navigation.navigate('OrderHistory') },
+                { icon: 'cart-outline', label: 'Keranjang Saya', color: '#964b00', action: () => navigation.navigate('Cart') },
+            ]
+        },
         {
             title: 'Pengaturan Akun',
             items: [
@@ -111,9 +154,6 @@ const ProfileScreen = ({ navigation }) => {
                             <Text style={styles.headerSubtitle}>Akun Saya 👤</Text>
                             <Text style={styles.headerTitle}>Profil</Text>
                         </View>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <Ionicons name="settings-outline" size={22} color="#374151" />
-                        </TouchableOpacity>
                     </View>
                 </Animated.View>
 
@@ -135,9 +175,28 @@ const ProfileScreen = ({ navigation }) => {
                             </View>
                             <Text style={styles.userName}>{user?.displayName || 'Pengguna'}</Text>
                             <Text style={styles.userEmail}>{user?.email || 'email@example.com'}</Text>
-                            <View style={styles.roleBadge}>
-                                <Ionicons name={isSeller ? 'storefront' : 'person'} size={12} color="#ffffff" />
-                                <Text style={styles.roleText}>{isSeller ? 'Penjual' : 'Pengguna'}</Text>
+                            <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                {/* Badge Admin */}
+                                {isSuperAdmin && (
+                                    <View style={[styles.roleBadge, { backgroundColor: '#dc2626' }]}>
+                                        <Ionicons name="shield-checkmark" size={12} color="#ffffff" />
+                                        <Text style={styles.roleText}>Admin</Text>
+                                    </View>
+                                )}
+
+                                {/* Badge Penjual */}
+                                {isSeller && (
+                                    <View style={[styles.roleBadge, { backgroundColor: '#d97706' }]}>
+                                        <Ionicons name="storefront" size={12} color="#ffffff" />
+                                        <Text style={styles.roleText}>Penjual</Text>
+                                    </View>
+                                )}
+
+                                {/* Badge Pengguna (Selalu muncul) */}
+                                <View style={styles.roleBadge}>
+                                    <Ionicons name="person" size={12} color="#ffffff" />
+                                    <Text style={styles.roleText}>Pengguna</Text>
+                                </View>
                             </View>
                         </View>
                     </LinearGradient>
@@ -146,13 +205,19 @@ const ProfileScreen = ({ navigation }) => {
                 <Animated.View entering={FadeInDown.duration(500).delay(200)} style={styles.statsSection}>
                     <View style={styles.statsRow}>
                         {stats.map((stat, index) => (
-                            <View key={index} style={styles.statCard}>
+                            <TouchableOpacity
+                                key={index}
+                                style={styles.statCard}
+                                disabled={stat.label !== 'Pesanan'}
+                                onPress={() => stat.label === 'Pesanan' && navigation.navigate('OrderHistory')}
+                                activeOpacity={0.7}
+                            >
                                 <View style={[styles.statIcon, { backgroundColor: stat.color + '15' }]}>
                                     <Ionicons name={stat.icon} size={20} color={stat.color} />
                                 </View>
                                 <Text style={styles.statValue}>{stat.value}</Text>
                                 <Text style={styles.statLabel}>{stat.label}</Text>
-                            </View>
+                            </TouchableOpacity>
                         ))}
                     </View>
                 </Animated.View>

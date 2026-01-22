@@ -167,6 +167,8 @@ export const courseApi = {
     getEnrolled: (params) => api.get('/education/courses/enrolled', { params }),
     completeLesson: (courseId, lessonId, timeSpent) =>
         api.post(`/education/courses/${courseId}/lessons/${lessonId}/complete`, { timeSpent }),
+    saveQuizScore: (courseId, quizId, score) =>
+        api.post(`/education/courses/${courseId}/quizzes/${quizId}/score`, { score }),
 };
 
 // Material endpoints

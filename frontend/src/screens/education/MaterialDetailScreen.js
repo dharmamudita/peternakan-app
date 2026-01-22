@@ -42,12 +42,18 @@ const MaterialDetailScreen = ({ navigation, route }) => {
         }
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
+    const formatDate = (date) => {
+        if (!date) return '';
         try {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return '';
-            return date.toLocaleDateString('id-ID', {
+            let dateObj;
+            if (date._seconds) {
+                dateObj = new Date(date._seconds * 1000);
+            } else {
+                dateObj = new Date(date);
+            }
+            if (isNaN(dateObj.getTime())) return '';
+
+            return dateObj.toLocaleDateString('id-ID', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',

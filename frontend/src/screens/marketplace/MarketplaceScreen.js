@@ -113,6 +113,13 @@ const MarketplaceScreen = ({ navigation }) => {
         return colors[category] || COLORS.primary;
     };
 
+    const filteredProducts = products.filter(product => {
+        const matchesCategory = selectedCategory === 'Semua' || product.category === selectedCategory;
+        const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase()) ||
+            product.location.toLowerCase().includes(search.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
+
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -233,13 +240,14 @@ const MarketplaceScreen = ({ navigation }) => {
 
                 {/* Products Grid */}
                 <View style={styles.productsGrid}>
-                    {products.map((product, index) => (
+                    {filteredProducts.map((product, index) => (
                         <ProductCard
                             key={product.id}
                             product={product}
                             index={index}
                             formatPrice={formatPrice}
                             getCategoryColor={getCategoryColor}
+                            onPress={() => navigation.navigate('ProductDetail', { product })}
                         />
                     ))}
                 </View>
@@ -250,12 +258,12 @@ const MarketplaceScreen = ({ navigation }) => {
     );
 };
 
-const ProductCard = ({ product, index, formatPrice, getCategoryColor }) => (
+const ProductCard = ({ product, index, formatPrice, getCategoryColor, onPress }) => (
     <Animated.View
         entering={FadeInUp.delay(index * 80).duration(400)}
         style={styles.productCardWrapper}
     >
-        <TouchableOpacity activeOpacity={0.9} onPress={() => { }}>
+        <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
             <View style={styles.productCard}>
                 {/* Image Placeholder */}
                 <View style={styles.productImage}>

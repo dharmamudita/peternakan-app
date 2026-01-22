@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -21,6 +21,7 @@ const EducationScreen = ({ navigation }) => {
     const [courses, setCourses] = useState([]);
     const [materials, setMaterials] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
 
     useFocusEffect(
         React.useCallback(() => {
@@ -37,10 +38,12 @@ const EducationScreen = ({ navigation }) => {
             ]);
 
             const dashboard = statsRes.data || statsRes || {};
+            const userStats = dashboard.stats || {};
+
             setStats({
-                progress: dashboard.progressPercentage || 0,
-                completed: dashboard.completedLessons || 0,
-                total: dashboard.totalLessons || 0
+                progress: userStats.averageProgress || 0,
+                completed: userStats.completed || 0, // Menggunakan completed courses
+                total: userStats.totalEnrolled || 0
             });
 
             setCourses(coursesRes.data || coursesRes || []);
@@ -52,11 +55,26 @@ const EducationScreen = ({ navigation }) => {
         }
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
-        return new Date(dateString).toLocaleDateString('id-ID', {
-            day: 'numeric', month: 'short', year: 'numeric'
-        });
+    const formatDate = (date) => {
+        if (!date) return '';
+        try {
+            // Handle Firestore Timestamp object (has _seconds)
+            let dateObj;
+            if (date._seconds) {
+                dateObj = new Date(date._seconds * 1000);
+            } else {
+                dateObj = new Date(date);
+            }
+
+            // Check if valid date
+            if (isNaN(dateObj.getTime())) return '';
+
+            return dateObj.toLocaleDateString('id-ID', {
+                day: 'numeric', month: 'short', year: 'numeric'
+            });
+        } catch (e) {
+            return '';
+        }
     };
 
     return (
@@ -68,9 +86,18 @@ const EducationScreen = ({ navigation }) => {
                             <Text style={styles.headerSubtitle}>Tingkatkan Ilmu 📚</Text>
                             <Text style={styles.headerTitle}>Pusat Edukasi</Text>
                         </View>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <Ionicons name="search-outline" size={22} color="#374151" />
-                        </TouchableOpacity>
+                    </View>
+
+                    {/* Search Bar */}
+                    <View style={styles.searchContainer}>
+                        <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Cari materi atau kursus..."
+                            placeholderTextColor="#9ca3af"
+                            value={search}
+                            onChangeText={setSearch}
+                        />
                     </View>
                 </Animated.View>
 
@@ -84,7 +111,7 @@ const EducationScreen = ({ navigation }) => {
                             <View style={styles.progressBarBg}>
                                 <View style={[styles.progressBarFill, { width: `${stats.progress}%` }]} />
                             </View>
-                            <Text style={styles.progressText}>{stats.completed} dari {stats.total} materi selesai</Text>
+                            <Text style={styles.progressText}>{stats.completed} dari {stats.total} kursus selesai</Text>
                         </View>
                     </LinearGradient>
                 </Animated.View>
@@ -110,8 +137,8 @@ const EducationScreen = ({ navigation }) => {
                     <Text style={styles.sectionTitle}>{activeTab === 'courses' ? 'Kursus' : 'Materi Pustaka'}</Text>
 
                     {activeTab === 'courses' ? (
-                        courses.length > 0 ? (
-                            courses.map((course, i) => (
+                        courses.filter(c => c.title.toLowerCase().includes(search.toLowerCase())).length > 0 ? (
+                            courses.filter(c => c.title.toLowerCase().includes(search.toLowerCase())).map((course, i) => (
                                 <Animated.View key={course.id} entering={FadeInUp.delay(i * 100)}>
                                     <TouchableOpacity
                                         style={styles.card}
@@ -136,8 +163,8 @@ const EducationScreen = ({ navigation }) => {
                             <Text style={styles.emptyText}>Belum ada kursus tersedia</Text>
                         )
                     ) : (
-                        materials.length > 0 ? (
-                            materials.map((item, i) => (
+                        materials.filter(m => m.title.toLowerCase().includes(search.toLowerCase())).length > 0 ? (
+                            materials.filter(m => m.title.toLowerCase().includes(search.toLowerCase())).map((item, i) => (
                                 <Animated.View key={item.id} entering={FadeInUp.delay(i * 100)}>
                                     <TouchableOpacity
                                         style={styles.card}
@@ -180,6 +207,24 @@ const styles = StyleSheet.create({
     iconButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#faf8f5', alignItems: 'center', justifyContent: 'center', ...SHADOWS.small },
     progressSection: { paddingHorizontal: SIZES.padding, marginBottom: 24 },
     progressCard: { borderRadius: 24, padding: 24, overflow: 'hidden', ...SHADOWS.large },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#faf8f5',
+        marginTop: 16,
+        paddingHorizontal: 16,
+        height: 50,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: '#f0ebe3',
+    },
+    searchIcon: { marginRight: 10 },
+    searchInput: {
+        flex: 1,
+        height: '100%',
+        color: '#111827',
+        fontSize: 15,
+    },
     progressDecor1: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.1)', top: -30, right: -20 },
     progressLabel: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
     progressValue: { fontSize: 36, fontWeight: '800', color: '#ffffff', marginBottom: 8 },
