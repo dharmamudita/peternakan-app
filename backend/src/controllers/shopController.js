@@ -78,10 +78,24 @@ const getShopById = asyncHandler(async (req, res) => {
     return success(res, shop.toJSON(), 'Data toko berhasil diambil');
 });
 
+// Get Shop Reviews (Public)
+const getShopReviews = asyncHandler(async (req, res) => {
+    const { id } = req.params; // Shop ID
+
+    const shop = await Shop.getById(id);
+    if (!shop) {
+        return notFound(res, 'Toko tidak ditemukan');
+    }
+
+    const reviews = await Shop.getReviews(shop.userId);
+    return success(res, reviews, 'Ulasan berhasil diambil');
+});
+
 module.exports = {
     registerShop,
     getMyShop,
     getPendingShops,
     verifyShop,
-    getShopById
+    getShopById,
+    getShopReviews
 };

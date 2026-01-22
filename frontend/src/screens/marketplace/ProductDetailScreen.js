@@ -175,10 +175,32 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
                     {/* Product Image Gallery */}
                     <View style={styles.imageContainer}>
-                        <View style={styles.imagePlaceholder}>
-                            <Ionicons name="image-outline" size={64} color="#d1d5db" />
-                            <Text style={{ color: '#9ca3af', marginTop: 10 }}>Gambar Produk</Text>
-                        </View>
+                        {product.images && product.images.length > 0 ? (
+                            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+                                {product.images.map((img, index) => (
+                                    <Image
+                                        key={index}
+                                        source={{ uri: img }}
+                                        style={{ width: width, height: 400 }}
+                                        resizeMode="cover"
+                                    />
+                                ))}
+                            </ScrollView>
+                        ) : (
+                            <View style={styles.imagePlaceholder}>
+                                <Ionicons name="image-outline" size={64} color="#d1d5db" />
+                                <Text style={{ color: '#9ca3af', marginTop: 10 }}>Gambar Produk</Text>
+                            </View>
+                        )}
+
+                        {/* Pagination Dots (Optional, if multiple images) */}
+                        {product.images && product.images.length > 1 && (
+                            <View style={{ position: 'absolute', bottom: 10, alignSelf: 'center', flexDirection: 'row', gap: 6 }}>
+                                {product.images.map((_, i) => (
+                                    <View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.8)' }} />
+                                ))}
+                            </View>
+                        )}
                         {/* Tags */}
                         <View style={styles.tagsContainer}>
                             {product.isNew && (
@@ -229,10 +251,13 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
 
                         {/* Seller Info */}
-                        {/* Seller Info */}
                         <TouchableOpacity
                             style={styles.sellerSection}
-                            onPress={() => navigation.navigate('SellerProfile', { sellerId: product.sellerId, sellerData: shop })}
+                            onPress={() => navigation.navigate('SellerProfile', {
+                                shopId: shop?.id,
+                                sellerId: shop?.userId || product.sellerId,
+                                sellerData: shop
+                            })}
                             disabled={!shop} // Disable if no shop data
                         >
                             <View style={styles.sectionHeader}>

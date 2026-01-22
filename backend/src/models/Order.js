@@ -110,8 +110,13 @@ class Order {
         if (status && status !== 'all') {
             query = query.where('status', '==', status);
         }
-        const snapshot = await query.orderBy('createdAt', 'desc').get();
-        return snapshot.docs.map(doc => new Order({ id: doc.id, ...doc.data() }));
+
+        // Remove orderBy from query to avoid missing index errors
+        const snapshot = await query.get();
+        let orders = snapshot.docs.map(doc => new Order({ id: doc.id, ...doc.data() }));
+
+        // Manual sort in memory
+        return orders.sort((a, b) => b.createdAt - a.createdAt);
     }
 
     // Get orders by seller
@@ -120,8 +125,13 @@ class Order {
         if (status && status !== 'all') {
             query = query.where('status', '==', status);
         }
-        const snapshot = await query.orderBy('createdAt', 'desc').get();
-        return snapshot.docs.map(doc => new Order({ id: doc.id, ...doc.data() }));
+
+        // Remove orderBy from query to avoid missing index errors
+        const snapshot = await query.get();
+        let orders = snapshot.docs.map(doc => new Order({ id: doc.id, ...doc.data() }));
+
+        // Manual sort in memory
+        return orders.sort((a, b) => b.createdAt - a.createdAt);
     }
 
     // Update order status

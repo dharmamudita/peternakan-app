@@ -119,6 +119,25 @@ class Shop {
         });
         return await this.getById(id);
     }
+
+    // Get reviews for this shop (by sellerId)
+    static async getReviews(sellerId) {
+        const snapshot = await db.collection('reviews')
+            .where('sellerId', '==', sellerId)
+            .get();
+
+        const reviews = snapshot.docs.map(doc => {
+            const data = doc.data();
+            // Ensure dates are parsed
+            if (data.createdAt && data.createdAt.toDate) {
+                data.createdAt = data.createdAt.toDate();
+            }
+            return { id: doc.id, ...data };
+        });
+
+        // Sort in memory (newest first)
+        return reviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
 }
 
 module.exports = Shop;
