@@ -390,9 +390,6 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
             {/* Bottom Bar Fixed */}
             <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
-                <TouchableOpacity style={styles.cartButton}>
-                    <Ionicons name="chatbubbles-outline" size={24} color="#374151" />
-                </TouchableOpacity>
                 <TouchableOpacity style={styles.cartButton} onPress={handleAddToCart}>
                     <Ionicons name="cart-outline" size={24} color="#374151" />
                 </TouchableOpacity>

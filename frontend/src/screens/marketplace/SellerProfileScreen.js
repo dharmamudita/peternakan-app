@@ -153,7 +153,7 @@ const SellerProfileScreen = ({ navigation, route }) => {
                     <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitleWhite}>Profil Penjual</Text>
-
+                <View style={{ width: 40 }} />
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
