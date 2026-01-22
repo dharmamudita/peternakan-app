@@ -266,10 +266,9 @@ const MarketplaceScreen = ({ navigation }) => {
                                                 style={styles.productImage}
                                                 resizeMode="cover"
                                             />
-                                            {/* Dummy Rating for now */}
                                             <View style={styles.ratingBadge}>
                                                 <Ionicons name="star" size={10} color="#fbbf24" />
-                                                <Text style={styles.ratingText}>4.8</Text>
+                                                <Text style={styles.ratingText}>{item.rating > 0 ? item.rating : 'Baru'}</Text>
                                             </View>
                                         </View>
                                         <View style={styles.productInfo}>
@@ -281,8 +280,9 @@ const MarketplaceScreen = ({ navigation }) => {
                                             </Text>
                                             <View style={styles.locationRow}>
                                                 <Ionicons name="location-outline" size={12} color="#9ca3af" />
-                                                {/* Fallback data because location is not in product schema yet or fetch seller */}
-                                                <Text style={styles.locationText}>Indonesia</Text>
+                                                <Text style={styles.locationText} numberOfLines={1}>
+                                                    {item.location || 'Indonesia'}
+                                                </Text>
                                             </View>
                                             <View style={styles.productFooter}>
                                                 <Text style={styles.soldText}>Stok: {item.stock}</Text>

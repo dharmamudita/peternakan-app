@@ -58,6 +58,26 @@ class MarketplaceService {
                 await Product.incrementViews(productId);
             }
 
+            // Populate Location
+            let location = 'Indonesia';
+            let shopName = '';
+            try {
+                let shop = null;
+                if (product.shopId) {
+                    shop = await Shop.getById(product.shopId);
+                } else if (product.sellerId) {
+                    shop = await Shop.getByUserId(product.sellerId);
+                }
+
+                if (shop) {
+                    if (shop.address) location = shop.address;
+                    if (shop.name) shopName = shop.name;
+                }
+            } catch (e) { }
+
+            product.location = location;
+            product.sellerName = shopName || product.sellerName; // Update seller name too if available
+
             return product;
         } catch (error) {
             throw error;
@@ -86,7 +106,30 @@ class MarketplaceService {
      */
     static async getAllProducts(page = 1, limit = 10, filters = {}) {
         try {
-            return await Product.getAll(page, limit, filters);
+            const result = await Product.getAll(page, limit, filters);
+
+            // Populate location from Shop
+            const updatedData = await Promise.all(result.data.map(async (product) => {
+                let location = 'Indonesia';
+                try {
+                    let shop = null;
+                    if (product.shopId) {
+                        shop = await Shop.getById(product.shopId);
+                    } else if (product.sellerId) {
+                        shop = await Shop.getByUserId(product.sellerId);
+                    }
+                    if (shop && shop.address) location = shop.address;
+                } catch (e) {
+                    // Ignore error, keep default
+                }
+
+                // Attach dynamic property to product instance
+                product.location = location;
+                return product;
+            }));
+
+            result.data = updatedData;
+            return result;
         } catch (error) {
             throw error;
         }
