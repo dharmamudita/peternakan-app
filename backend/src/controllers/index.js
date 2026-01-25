@@ -18,4 +18,5 @@ module.exports = {
     uploadController,
     notificationController,
     reportController: require('./reportController'),
+    aiController: require('./aiController'),
 };

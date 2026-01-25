@@ -53,6 +53,9 @@ import {
     AddEditProductScreen,
     SellerOrdersScreen,
     ReportIssuesScreen,
+    HealthAnalysisScreen,
+    DiseaseScanScreen,
+    AIResultScreen,
 } from '../screens';
 
 const Stack = createStackNavigator();
@@ -217,6 +220,9 @@ const AppNavigator = () => {
                         <Stack.Screen name="MyProducts" component={MyProductsScreen} />
                         <Stack.Screen name="AddEditProduct" component={AddEditProductScreen} />
                         <Stack.Screen name="SellerOrders" component={SellerOrdersScreen} />
+                        <Stack.Screen name="HealthAnalysis" component={HealthAnalysisScreen} />
+                        <Stack.Screen name="DiseaseScan" component={DiseaseScanScreen} />
+                        <Stack.Screen name="AIResult" component={AIResultScreen} />
                     </>
                 ) : (
                     <Stack.Screen name="Auth" component={AuthStack} />

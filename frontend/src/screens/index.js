@@ -20,3 +20,7 @@ export { default as BroadcastScreen } from './admin/BroadcastScreen';
 export { default as SellerManagementScreen } from './admin/SellerManagementScreen';
 export { default as ReportIssuesScreen } from './admin/ReportIssuesScreen';
 export { default as NotificationScreen } from './notification/NotificationScreen';
+
+// AI Screens
+export * from './ai';
+

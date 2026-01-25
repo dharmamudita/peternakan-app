@@ -45,6 +45,7 @@ router.get('/', (req, res) => {
             materials: '/api/materials',
             education: '/api/education',
             upload: '/api/upload',
+            ai: '/api/ai',
         },
     });
 });
@@ -65,5 +66,6 @@ router.use('/reports', require('./reportRoutes'));
 router.use('/shops', require('./shopRoutes'));
 router.use('/seller', require('./sellerRoutes'));
 router.use('/stats', require('./statsRoutes'));
+router.use('/ai', require('./aiRoutes'));
 
 module.exports = router;

@@ -264,4 +264,20 @@ export const statsApi = {
     getAdminStats: () => api.get('/stats/admin'),
 };
 
+// AI/ML endpoints
+export const aiApi = {
+    // Check ML service health
+    checkHealth: () => api.get('/ai/health'),
+
+    // Predict animal health
+    predictHealth: (data) => api.post('/ai/predict/health', data),
+
+    // Detect disease from image (base64)
+    detectDisease: (imageBase64) => api.post('/ai/predict/disease', { image: imageBase64 }),
+
+    // Get model status
+    getModelStatus: () => api.get('/ai/model/status'),
+};
+
 export default api;
+

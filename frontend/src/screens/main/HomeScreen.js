@@ -150,10 +150,17 @@ const HomeScreen = ({ navigation }) => {
         },
         {
             id: 2,
-            title: 'Catat Kesehatan',
-            icon: 'medical',
+            title: 'Analisis Kesehatan',
+            icon: 'pulse',
             color: '#7c3f06',
-            onPress: () => Platform.OS === 'web' ? window.alert('Fitur akan segera hadir!') : Alert.alert('Info', 'Fitur Catat Kesehatan akan segera hadir!')
+            onPress: () => navigation.navigate('HealthAnalysis')
+        },
+        {
+            id: 3,
+            title: 'Scan Penyakit',
+            icon: 'scan',
+            color: '#b87333',
+            onPress: () => navigation.navigate('DiseaseScan')
         },
     ];
 

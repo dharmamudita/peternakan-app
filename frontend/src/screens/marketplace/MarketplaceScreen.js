@@ -3,7 +3,7 @@
  * Halaman jual beli untuk pembeli
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     View,
     Text,
@@ -24,6 +24,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInUp, FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker'; // Import ImagePicker
+import axios from 'axios'; // Import axios
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { productApi, cartApi } from '../../services/api';
 
@@ -40,6 +42,15 @@ const MarketplaceScreen = ({ navigation }) => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [visualSearchLoading, setVisualSearchLoading] = useState(false); // New state
+    const [visualMatchIds, setVisualMatchIds] = useState(null); // Valid matches IDs
+
+    // Reset visual match on search text change
+    useEffect(() => {
+        if (search && visualMatchIds) {
+            setVisualMatchIds(null);
+        }
+    }, [search]);
 
     const categories = [
         { id: 'Semua', icon: 'apps' },
@@ -52,6 +63,7 @@ const MarketplaceScreen = ({ navigation }) => {
     ];
 
     const fetchProducts = async () => {
+        // ... (same as before)
         try {
             // Fetch all products (active)
             const response = await productApi.getAll({ status: 'active', limit: 100 });
@@ -78,6 +90,75 @@ const MarketplaceScreen = ({ navigation }) => {
         }, [])
     );
 
+    // Visual Search Logic (Clean Version)
+    const handleVisualSearch = async () => {
+        try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Izin', 'Butuh izin akses galeri untuk scan foto.');
+                return;
+            }
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+                base64: true,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                const image = result.assets[0];
+                setVisualSearchLoading(true);
+                setVisualMatchIds(null);
+
+                let imageBase64 = image.base64;
+                if (!imageBase64.startsWith('data:image')) {
+                    imageBase64 = `data:image/jpeg;base64,${imageBase64}`;
+                }
+
+                console.log("Analyzing product similarity...");
+
+                try {
+                    const response = await axios.post('http://127.0.0.1:5001/api/analyze/product',
+                        { image: imageBase64 },
+                        { headers: { 'Content-Type': 'application/json' }, timeout: 20000 }
+                    );
+
+                    if (response.data.success) {
+                        const { search_query, detected_features } = response.data;
+                        const category = detected_features?.category || 'Umum';
+
+                        console.log("AI Result:", category, search_query);
+                        Alert.alert("Hasil Analisis AI", `Terdeteksi: ${search_query}\nMenampilkan produk yang relevan.`);
+
+                        const filtered = products.filter(p => {
+                            const name = p.name ? p.name.toLowerCase() : '';
+                            const desc = p.description ? p.description.toLowerCase() : '';
+                            const cat = category.toLowerCase();
+                            return name.includes(cat) || desc.includes(cat);
+                        });
+
+                        if (filtered.length > 0) {
+                            setVisualMatchIds(filtered.map(p => p.id));
+                        } else {
+                            setSearch(category);
+                            Alert.alert("Info", `Tidak ditemukan produk "${category}" yang persis, namun pencarian telah disesuaikan.`);
+                        }
+                    } else {
+                        Alert.alert("Gagal", "AI tidak dapat menganalisis gambar.");
+                    }
+                } catch (error) {
+                    console.error("Visual Search Error:", error);
+                    Alert.alert("Error", "Gagal menghubungi AI Service.");
+                } finally {
+                    setVisualSearchLoading(false);
+                }
+            }
+        } catch (err) {
+            console.log("Visual search setup error:", err);
+        }
+    };
     const onRefresh = () => {
         setRefreshing(true);
         fetchProducts();
@@ -128,9 +209,30 @@ const MarketplaceScreen = ({ navigation }) => {
 
     // Client-side filtering
     const filteredProducts = products.filter(product => {
+        // PRIORITY 1: Visual Match result
+        if (visualMatchIds !== null) {
+            return visualMatchIds.includes(product.id);
+        }
+
         const matchesCategory = selectedCategory === 'Semua' || (product.category && product.category.toLowerCase() === selectedCategory.toLowerCase()) || (product.categoryId === selectedCategory);
-        const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
-        return matchesCategory && matchesSearch;
+
+        const searchLower = search.toLowerCase().trim();
+        if (!searchLower) return matchesCategory;
+
+        // Smart Filtering Logic (Text)
+        const searchParts = searchLower.split(' ');
+        const nameLower = product.name.toLowerCase();
+        const descLower = (product.description || '').toLowerCase();
+        const productCategory = (product.category || '').toLowerCase();
+
+        if (searchParts.length > 1) {
+            const categoryKeyword = searchParts[0];
+            const isCategoryMatch = nameLower.includes(categoryKeyword) || productCategory.includes(categoryKeyword);
+            if (!isCategoryMatch) return false;
+            return true;
+        }
+
+        return matchesCategory && (nameLower.includes(searchLower) || descLower.includes(searchLower));
     });
 
     return (
@@ -142,6 +244,7 @@ const MarketplaceScreen = ({ navigation }) => {
             >
                 {/* Header */}
                 <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
+
                     <View style={styles.headerTop}>
                         <View style={styles.headerLeft}>
                             <Text style={styles.headerSubtitle}>Jual Beli Online 🛒</Text>
@@ -163,17 +266,39 @@ const MarketplaceScreen = ({ navigation }) => {
                     </View>
                 </Animated.View>
 
-                {/* Search Bar */}
+                {/* Search Bar with Visual Search */}
                 <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.searchContainer}>
-                    <View style={styles.searchBar}>
-                        <Ionicons name="search" size={20} color="#9ca3af" />
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Cari hewan, pakan, atau alat..."
-                            placeholderTextColor="#9ca3af"
-                            value={search}
-                            onChangeText={setSearch}
-                        />
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                        <TouchableOpacity
+                            style={[
+                                styles.visualSearchBtn,
+                                visualSearchLoading && { opacity: 0.7 }
+                            ]}
+                            onPress={handleVisualSearch}
+                            disabled={visualSearchLoading}
+                        >
+                            {visualSearchLoading ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                                <Ionicons name="camera" size={22} color="#fff" />
+                            )}
+                        </TouchableOpacity>
+
+                        <View style={styles.searchBar}>
+                            <Ionicons name="search" size={20} color="#9ca3af" />
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Cari hewan, pakan, atau alat..."
+                                placeholderTextColor="#9ca3af"
+                                value={search}
+                                onChangeText={setSearch}
+                            />
+                            {search.length > 0 && (
+                                <TouchableOpacity onPress={() => setSearch('')}>
+                                    <Ionicons name="close-circle" size={18} color="#9ca3af" />
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     </View>
                 </Animated.View>
 
@@ -257,8 +382,11 @@ const MarketplaceScreen = ({ navigation }) => {
                         <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
                     ) : filteredProducts.length === 0 ? (
                         <View style={styles.emptyContainer}>
-                            <Ionicons name="cube-outline" size={48} color="#d1d5db" />
-                            <Text style={styles.emptyText}>Tidak ada produk ditemukan</Text>
+                            <Ionicons name="search-outline" size={48} color="#d1d5db" />
+                            <Text style={styles.emptyText}>Produk yang Anda analisis tidak tersedia</Text>
+                            <Text style={{ color: '#9ca3af', marginTop: 4, fontSize: 12 }}>
+                                Kami tidak menemukan "{search}" di marketplace saat ini.
+                            </Text>
                         </View>
                     ) : (
                         <View style={styles.productsGrid}>
@@ -380,6 +508,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     searchBar: {
+        flex: 1, // Agar search bar mengambil sisa ruang
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#faf8f5',
@@ -389,6 +518,14 @@ const styles = StyleSheet.create({
         gap: 12,
         borderWidth: 1,
         borderColor: '#f0ebe3',
+    },
+    visualSearchBtn: {
+        width: 50,
+        borderRadius: 16,
+        backgroundColor: COLORS.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...SHADOWS.small,
     },
     searchInput: {
         flex: 1,
