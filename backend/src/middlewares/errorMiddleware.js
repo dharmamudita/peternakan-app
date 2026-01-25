@@ -29,7 +29,18 @@ const errorHandler = (err, req, res, next) => {
 
     // Firebase Auth Errors
     if (err.code && err.code.startsWith('auth/')) {
-        statusCode = 401;
+        // Map specific auth errors to 400, others stay 401
+        const badRequestErrors = [
+            'auth/email-already-exists',
+            'auth/invalid-password',
+            'auth/invalid-phone-number',
+            'auth/operation-not-allowed',
+            'auth/weak-password',
+            'auth/phone-number-already-exists'
+        ];
+
+        statusCode = badRequestErrors.includes(err.code) ? 400 : 401;
+
         switch (err.code) {
             case 'auth/id-token-expired':
                 message = 'Token sudah kadaluarsa';
@@ -43,8 +54,17 @@ const errorHandler = (err, req, res, next) => {
             case 'auth/user-not-found':
                 message = 'User tidak ditemukan';
                 break;
+            case 'auth/email-already-exists':
+                message = 'Email sudah terdaftar';
+                break;
+            case 'auth/phone-number-already-exists':
+                message = 'Nomor telepon sudah digunakan oleh akun lain';
+                break;
+            case 'auth/operation-not-allowed':
+                message = 'Metode autentikasi ini sedang dinonaktifkan di server';
+                break;
             default:
-                message = 'Authentication error';
+                message = err.message || 'Authentication error';
         }
     }
 
@@ -75,7 +95,8 @@ const errorHandler = (err, req, res, next) => {
     res.status(statusCode).json({
         success: false,
         message,
-        error: process.env.NODE_ENV === 'development' ? error || err.stack : error,
+        error: process.env.NODE_ENV === 'development' ? (error || err.stack) : error,
+        code: process.env.NODE_ENV === 'development' ? err.code : undefined
     });
 };
 

@@ -106,6 +106,7 @@ class AuthService {
 
             return user;
         } catch (error) {
+            console.error('[AuthService] Register Error:', error.code, error.message);
             // Mapping error Firebase Auth ke pesan yang lebih user-friendly
             if (error.code === 'auth/email-already-exists') {
                 throw new Error('Email sudah terdaftar (Firebase Auth)');
