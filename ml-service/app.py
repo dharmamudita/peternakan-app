@@ -190,8 +190,12 @@ def predict_health():
                     'message': f'Field {field} wajib diisi'
                 }), 400
         
-        # Make prediction
-        result = health_predictor.predict(data)
+        # Make prediction with history if available
+        history = data.get('history', [])
+        if history and isinstance(history, list):
+            result = health_predictor.predict_with_history(data, history)
+        else:
+            result = health_predictor.predict(data)
         
         return jsonify({
             'success': True,

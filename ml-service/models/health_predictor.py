@@ -232,43 +232,118 @@ class HealthPredictor:
             }
         }
     
+    def predict_with_history(self, current_data, history=None):
+        """
+        Predict health status considering historical trends (Data Mining Approach)
+        Args:
+            current_data: dict with current vitals
+            history: list of dicts with previous health records
+        """
+        # 1. Get Base Prediction
+        basic_res = self.predict(current_data)
+        
+        if not history or len(history) < 2:
+            return basic_res
+
+        # 2. Extract Trends
+        history_df = pd.DataFrame(history)
+        history_df['temperature'] = pd.to_numeric(history_df['temperature'], errors='coerce')
+        history_df['weight'] = pd.to_numeric(history_df['weight'], errors='coerce')
+        
+        # Calculate Personal Baseline
+        temp_mean = history_df['temperature'].mean()
+        temp_std = history_df['temperature'].std()
+        weight_recent = history_df.iloc[-1]['weight']
+        
+        # 3. Detect Anomalies (Data Mining Pattern)
+        curr_temp = current_data.get('suhu_celcius', 38.5)
+        curr_weight = current_data.get('berat_kg', 100)
+        
+        anomalies = []
+        trend_boost = 0
+        
+        # Temperature Variance Check (Z-Score concept)
+        if temp_std > 0:
+            z_score = (curr_temp - temp_mean) / temp_std
+            if abs(z_score) > 2.0:
+                anomalies.append(f"Anomali Suhu: Penyimpangan signifikan dari baseline pribadi ({curr_temp}°C vs rerata {temp_mean:.1f}°C)")
+                trend_boost += 1.5
+
+        # Weight Trend Check (Weight Loss is a major red flag)
+        if weight_recent > curr_weight * 1.05: # >5% loss
+            loss_pct = ((weight_recent - curr_weight) / weight_recent) * 100
+            anomalies.append(f"Penurun Berat Badan: Turun {loss_pct:.1f}% dari pemeriksaan terakhir")
+            trend_boost += 2.0
+
+        # 4. Integrate Trends into Result
+        if trend_boost > 0:
+            # Shift risk level if trends are alarming
+            original_status = basic_res['status_key']
+            risk_levels = ['sehat', 'risiko_rendah', 'risiko_sedang', 'risiko_tinggi', 'sakit']
+            
+            try:
+                curr_idx = risk_levels.index(original_status)
+                new_idx = min(len(risk_levels)-1, curr_idx + (1 if trend_boost > 1 else 0))
+                
+                if new_idx > curr_idx:
+                    new_key = risk_levels[new_idx]
+                    status_info = self.result_mapping[new_key]
+                    
+                    basic_res['status'] = f"{status_info['label']} (Terdeteksi Tren Negatif)"
+                    basic_res['risk_score'] = max(basic_res['risk_score'], status_info['risk_score'])
+                    basic_res['color'] = status_info['color']
+                    basic_res['recommendations'] = list(set(basic_res['recommendations'] + ["Segera konsultasi karena adanya tren penurunan kondisi"]))
+            except ValueError:
+                pass
+
+        basic_res['risk_factors'] = list(set(basic_res['risk_factors'] + anomalies))
+        basic_res['has_historical_context'] = True
+        
+        return basic_res
+
     def _identify_risk_factors(self, data):
-        """Identify risk factors from input data"""
+        """Identify risk factors from input data with smarter logic"""
         factors = []
         
         # Check temperature
-        jenis = data.get('jenis_hewan', 'sapi')
+        jenis = data.get('jenis_hewan', 'sapi').lower()
         suhu = data.get('suhu_celcius', 38.5)
         
+        # Data-driven normal ranges
         normal_temp = {
-            'sapi': (38.0, 39.5),
-            'kambing': (38.5, 40.0),
-            'ayam': (40.5, 42.0)
+            'sapi': (37.5, 39.5),
+            'kambing': (38.5, 40.5),
+            'ayam': (40.5, 43.0),
+            'domba': (38.0, 40.0)
         }
         
         temp_range = normal_temp.get(jenis, (38.0, 40.0))
-        if suhu < temp_range[0]:
-            factors.append(f"Suhu tubuh rendah ({suhu}°C, normal: {temp_range[0]}-{temp_range[1]}°C)")
-        elif suhu > temp_range[1]:
-            factors.append(f"Suhu tubuh tinggi ({suhu}°C, normal: {temp_range[0]}-{temp_range[1]}°C)")
         
-        # Check appetite
-        if data.get('nafsu_makan') in ['menurun', 'tidak_mau']:
+        # Heat Stress Logic
+        env_temp = data.get('lingkungan_temp', 28)
+        humidity = data.get('kelembapan', 60)
+        
+        if suhu > temp_range[1]:
+            if env_temp > 32 and humidity > 70:
+                factors.append(f"Kemungkinan HEAT STRESS (Suhu {suhu}°C di lingkungan panas/lembab)")
+            else:
+                factors.append(f"Demam terdeteksi ({suhu}°C, normal: {temp_range[0]}-{temp_range[1]}°C)")
+        elif suhu < temp_range[0]:
+            factors.append(f"Hipotermia/Suhu rendah ({suhu}°C)")
+        
+        # Correlation checks
+        if data.get('nafsu_makan') == 'tidak_mau' and data.get('aktivitas') == 'sangat_lesu':
+            factors.append("Kombinasi Kritis: Tidak mau makan dan sangat lesu")
+        elif data.get('nafsu_makan') in ['menurun', 'tidak_mau']:
             factors.append(f"Nafsu makan {data.get('nafsu_makan').replace('_', ' ')}")
         
-        # Check activity
         if data.get('aktivitas') in ['lesu', 'sangat_lesu']:
             factors.append(f"Aktivitas {data.get('aktivitas').replace('_', ' ')}")
         
-        # Check vaccination
         if data.get('vaksinasi_lengkap') == 'tidak':
-            factors.append("Vaksinasi tidak lengkap")
+            factors.append("Kerentanan Tinggi: Vaksinasi belum lengkap")
         
-        # Check history
-        if data.get('riwayat_sakit') == 'ya':
-            factors.append("Ada riwayat sakit sebelumnya")
-        
-        return factors if factors else ["Tidak ada faktor risiko yang teridentifikasi"]
+        return factors if factors else ["Kondisi saat ini terpantau stabil dalam batas normal"]
 
 
 # For testing

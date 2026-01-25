@@ -26,24 +26,13 @@ class AIController {
     }
 
     /**
-     * Prediksi kesehatan hewan
+     * Prediksi kesehatan hewan (Data Mining Enhanced)
      * POST /api/ai/predict/health
-     * 
-     * Body:
-     * {
-     *   umur_bulan: number,
-     *   berat_kg: number,
-     *   suhu_celcius: number,
-     *   nafsu_makan: 'normal' | 'sedikit_menurun' | 'menurun' | 'tidak_mau',
-     *   aktivitas: 'aktif' | 'normal' | 'lesu' | 'sangat_lesu',
-     *   riwayat_sakit: 'ya' | 'tidak',
-     *   vaksinasi_lengkap: 'ya' | 'tidak',
-     *   jenis_hewan: 'sapi' | 'kambing' | 'ayam'
-     * }
      */
     static async predictHealth(req, res) {
         try {
             const data = req.body;
+            const HealthRecord = require('../models/HealthRecord');
 
             // Validate required field
             if (!data.jenis_hewan) {
@@ -53,14 +42,42 @@ class AIController {
                 });
             }
 
-            // Call ML Service
-            const result = await AIService.predictHealth(data);
+            // --- DATA MINING: Historical Context ---
+            // Kita mengambil data histori untuk mencari pola/tren (Data Mining)
+            let history = [];
+            if (data.animalId) {
+                console.log(`[Data Mining] Analyzing history for animal: ${data.animalId}`);
+                const historyRes = await HealthRecord.getByAnimalId(data.animalId, 1, 10);
+                if (historyRes && historyRes.data) {
+                    history = historyRes.data.map(h => ({
+                        date: h.recordDate,
+                        temperature: h.temperature,
+                        weight: h.weight
+                    })).reverse(); // Dari terlama ke terbaru
+                    console.log(`[Data Mining] Extracted ${history.length} data points for trend analysis`);
+                }
+            }
+
+            // --- DATA MINING: Environmental Context ---
+            // Integrasi variabel lingkungan yang mempengaruhi kesehatan (Heat Stress analysis)
+            const environment = {
+                lingkungan_temp: 31.5, // Mock data, bisa diintegrasikan dengan API cuaca
+                kelembapan: 78
+            };
+
+            // Panggil ML Service dengan payload yang diperkaya
+            const result = await AIService.predictHealth({
+                ...data,
+                ...environment,
+                history: history
+            });
 
             res.status(200).json({
                 success: true,
                 data: result.data || result
             });
         } catch (error) {
+            console.error('[AI Controller] Error:', error);
             res.status(500).json({
                 success: false,
                 error: error.message
@@ -69,16 +86,8 @@ class AIController {
     }
 
     /**
-     * Deteksi penyakit dari gambar
+     * Deteksi penyakit dari gambar (Hybrid AI Analysis)
      * POST /api/ai/predict/disease
-     * 
-     * Body (multipart/form-data):
-     * - image: File
-     * 
-     * OR Body (JSON):
-     * {
-     *   image: base64_string
-     * }
      */
     static async detectDisease(req, res) {
         try {
