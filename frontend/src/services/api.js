@@ -91,6 +91,15 @@ export const authApi = {
     },
 };
 
+// Address endpoints
+export const addressApi = {
+    getAll: () => api.get('/addresses'),
+    add: (data) => api.post('/addresses', data),
+    update: (id, data) => api.put(`/addresses/${id}`, data),
+    delete: (id) => api.delete(`/addresses/${id}`),
+    setDefault: (id) => api.put(`/addresses/${id}/default`),
+};
+
 // Farm endpoints
 export const farmApi = {
     getAll: (params) => api.get('/farms', { params }),

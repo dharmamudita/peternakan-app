@@ -158,6 +158,19 @@ const SellerOrdersScreen = ({ navigation }) => {
                 ))}
             </View>
 
+            {item.shippingAddress && (
+                <View style={styles.shippingSection}>
+                    <View style={styles.shippingHeader}>
+                        <Ionicons name="location-sharp" size={14} color={COLORS.primary} />
+                        <Text style={styles.shippingTitle}>Alamat Pengiriman:</Text>
+                    </View>
+                    <Text style={styles.shippingAddressText}>
+                        <Text style={{ fontWeight: '700', color: '#374151' }}>{item.shippingAddress.recipientName}</Text> | {item.shippingAddress.phoneNumber}{"\n"}
+                        {item.shippingAddress.fullAddress}, {item.shippingAddress.city}, {item.shippingAddress.province} {item.shippingAddress.postalCode}
+                    </Text>
+                </View>
+            )}
+
             <View style={styles.orderFooter}>
                 <View>
                     <Text style={styles.totalLabel}>Total</Text>
@@ -248,7 +261,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f9fafb',
-        ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {})
+        ...(Platform.OS === 'web' ? { flex: 0, height: 'auto', minHeight: '100vh' } : {})
     },
     header: {
         flexDirection: 'row',
@@ -399,6 +412,29 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#9ca3af',
         marginTop: 12,
+    },
+    shippingSection: {
+        backgroundColor: '#f9fafb',
+        padding: 12,
+        borderRadius: 10,
+        marginVertical: 8,
+    },
+    shippingHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 6,
+    },
+    shippingTitle: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#6b7280',
+        textTransform: 'uppercase',
+    },
+    shippingAddressText: {
+        fontSize: 13,
+        color: '#4b5563',
+        lineHeight: 18,
     },
 });
 

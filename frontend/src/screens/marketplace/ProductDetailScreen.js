@@ -119,38 +119,15 @@ const ProductDetailScreen = ({ navigation, route }) => {
         }
     };
 
-    const handleBuyNow = async () => {
-        const confirmBuy = async () => {
-            setIsBuying(true);
-            try {
-                await orderApi.create({
-                    productId: product.id,
-                    quantity: 1,
-                });
-                showAlert('Pembelian Berhasil! 🎉', 'Pesanan Anda telah dibuat. Penjual akan segera memproses pesanan Anda.');
-                navigation.navigate('OrderHistory');
-            } catch (error) {
-                console.error('Buy error:', error);
-                showAlert('Gagal', error.message || 'Gagal membuat pesanan');
-            } finally {
-                setIsBuying(false);
-            }
-        };
-
-        if (Platform.OS === 'web') {
-            if (window.confirm(`Beli ${product.name} seharga ${formatPrice(product.price)}?`)) {
-                await confirmBuy();
-            }
-        } else {
-            Alert.alert(
-                'Konfirmasi Pembelian',
-                `Beli ${product.name} seharga ${formatPrice(product.price)}?`,
-                [
-                    { text: 'Batal', style: 'cancel' },
-                    { text: 'Beli', onPress: confirmBuy }
-                ]
-            );
-        }
+    const handleBuyNow = () => {
+        navigation.navigate('Checkout', {
+            cartItems: [{
+                productId: product.id,
+                quantity: 1,
+                product: product
+            }],
+            totalAmount: product.price
+        });
     };
 
     const handleAddToCart = async () => {

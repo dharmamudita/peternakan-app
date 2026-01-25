@@ -8,4 +8,5 @@ export { default as CartScreen } from './CartScreen';
 export { default as MyProductsScreen } from './MyProductsScreen';
 export { default as AddEditProductScreen } from './AddEditProductScreen';
 export { default as SellerOrdersScreen } from './SellerOrdersScreen';
+export { default as CheckoutScreen } from './CheckoutScreen';
 

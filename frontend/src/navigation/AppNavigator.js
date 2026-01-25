@@ -56,6 +56,9 @@ import {
     HealthAnalysisScreen,
     DiseaseScanScreen,
     AIResultScreen,
+    AddressListScreen,
+    AddressFormScreen,
+    CheckoutScreen,
 } from '../screens';
 
 const Stack = createStackNavigator();
@@ -223,6 +226,9 @@ const AppNavigator = () => {
                         <Stack.Screen name="HealthAnalysis" component={HealthAnalysisScreen} />
                         <Stack.Screen name="DiseaseScan" component={DiseaseScanScreen} />
                         <Stack.Screen name="AIResult" component={AIResultScreen} />
+                        <Stack.Screen name="AddressList" component={AddressListScreen} />
+                        <Stack.Screen name="AddressForm" component={AddressFormScreen} />
+                        <Stack.Screen name="Checkout" component={CheckoutScreen} />
                     </>
                 ) : (
                     <Stack.Screen name="Auth" component={AuthStack} />

@@ -67,5 +67,6 @@ router.use('/shops', require('./shopRoutes'));
 router.use('/seller', require('./sellerRoutes'));
 router.use('/stats', require('./statsRoutes'));
 router.use('/ai', require('./aiRoutes'));
+router.use('/addresses', require('./addressRoutes'));
 
 module.exports = router;

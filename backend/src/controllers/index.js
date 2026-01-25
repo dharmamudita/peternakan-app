@@ -17,6 +17,7 @@ module.exports = {
     educationController,
     uploadController,
     notificationController,
+    addressController: require('./addressController'),
     reportController: require('./reportController'),
     aiController: require('./aiController'),
 };

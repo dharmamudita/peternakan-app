@@ -181,6 +181,19 @@ const OrderHistoryScreen = ({ navigation }) => {
                     ))}
                 </View>
 
+                {/* Shipping Address */}
+                {item.shippingAddress && (
+                    <View style={styles.shippingSection}>
+                        <View style={styles.shippingHeader}>
+                            <Ionicons name="location-sharp" size={12} color={COLORS.primary} />
+                            <Text style={styles.shippingTitle}>Dikirim ke:</Text>
+                        </View>
+                        <Text style={styles.shippingAddressText}>
+                            {item.shippingAddress.recipientName} • {item.shippingAddress.fullAddress}, {item.shippingAddress.city}
+                        </Text>
+                    </View>
+                )}
+
                 {/* Footer */}
                 <View style={styles.orderFooter}>
                     <View>
@@ -356,7 +369,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f9fafb',
-        ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {})
+        ...(Platform.OS === 'web' ? { flex: 0, height: 'auto', minHeight: '100vh' } : {})
     },
     header: {
         flexDirection: 'row',
@@ -656,6 +669,28 @@ const styles = StyleSheet.create({
     submitBtnText: {
         color: '#fff',
         fontWeight: '600',
+    },
+    shippingSection: {
+        marginTop: 12,
+        padding: 10,
+        backgroundColor: '#f9fafb',
+        borderRadius: 10,
+    },
+    shippingHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 4,
+    },
+    shippingTitle: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#6b7280',
+        textTransform: 'uppercase',
+    },
+    shippingAddressText: {
+        fontSize: 12,
+        color: '#4b5563',
     },
 });
 

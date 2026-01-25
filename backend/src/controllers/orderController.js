@@ -13,71 +13,68 @@ const { success, created, badRequest, notFound, forbidden } = require('../utils/
  * BUYER ENDPOINTS
  */
 
-// Create order (Buy now - langsung PAID untuk testing tanpa payment gateway)
+// Create order (Multi-item support)
 const createOrder = asyncHandler(async (req, res) => {
     const buyerId = req.user.id;
-    const { productId, quantity = 1, shippingAddress, shippingMethod, notes } = req.body;
+    const {
+        items,
+        shippingAddress,
+        shippingCost,
+        totalAmount,
+        sellerId,
+        shopId,
+        notes
+    } = req.body;
 
-    if (!productId) {
-        return badRequest(res, 'Product ID wajib diisi');
+    if (!items || !items.length) {
+        return badRequest(res, 'Daftar item pesanan wajib diisi');
     }
 
-    // Get product details
-    const product = await Product.getById(productId);
-    if (!product) {
-        return notFound(res, 'Produk tidak ditemukan');
+    if (!sellerId) {
+        return badRequest(res, 'ID Penjual wajib diisi');
     }
 
-    console.log('Creating order for product:', productId);
-    console.log('Product sellerId:', product.sellerId);
+    // Default shipping address fallback if not provided
+    const finalShippingAddress = shippingAddress || {
+        recipientName: req.user.displayName || 'Pembeli',
+        phoneNumber: req.user.phoneNumber || '',
+        fullAddress: req.user.address || 'Alamat tidak diisi',
+        city: '',
+        province: ''
+    };
 
-    // Ensure sellerId exists
-    if (!product.sellerId) {
-        return badRequest(res, 'Produk tidak memiliki penjual yang valid');
-    }
-
-    // Check stock
-    if (product.stock < quantity) {
-        return badRequest(res, 'Stok tidak mencukupi');
-    }
-
-    // Calculate total
-    const itemTotal = product.price * quantity;
-    const shippingCost = 0; // Free shipping for now
-    const totalAmount = itemTotal + shippingCost;
-
-    // Create order with PAID status (skip payment gateway for testing)
+    // Create order
     const order = await Order.create({
         buyerId,
-        sellerId: product.sellerId, // Ensure this is set correctly
-        shopId: product.shopId || '',
-        items: [{
-            productId: product.id,
-            name: product.name,
-            price: product.price,
-            quantity,
-            image: product.images?.[0] || ''
-        }],
-        totalAmount,
-        shippingAddress: shippingAddress || {
-            name: req.user.displayName,
-            phone: req.user.phoneNumber || '',
-            address: req.user.address || 'Alamat belum diisi'
-        },
-        shippingMethod: shippingMethod || 'Reguler',
-        shippingCost,
-        status: ORDER_STATUS.PAID, // Langsung PAID untuk testing
+        sellerId,
+        shopId: shopId || '',
+        items: items.map(item => ({
+            productId: item.productId,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image || ''
+        })),
+        totalAmount: totalAmount || items.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0) + (shippingCost || 0),
+        shippingAddress: finalShippingAddress,
+        shippingMethod: req.body.shippingMethod || 'Reguler',
+        shippingCost: shippingCost || 0,
+        status: ORDER_STATUS.PAID,
         buyerName: req.user.displayName || 'Pembeli',
         buyerPhone: req.user.phoneNumber || '',
         notes: notes || '',
     });
 
-    console.log('Order created with sellerId:', order.sellerId);
-
-    // Update product stock
-    await Product.update(productId, {
-        stock: product.stock - quantity
-    });
+    // Update product stock for each item (concurrently)
+    try {
+        await Promise.all(items.map(item =>
+            Product.getById(item.productId).then(prod => {
+                if (prod) return Product.update(item.productId, { stock: Math.max(0, prod.stock - item.quantity) });
+            })
+        ));
+    } catch (err) {
+        console.error('Error updating stock after order:', err);
+    }
 
     return created(res, order.toJSON(), 'Pesanan berhasil dibuat');
 });

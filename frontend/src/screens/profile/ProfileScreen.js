@@ -115,7 +115,7 @@ const ProfileScreen = ({ navigation }) => {
                 { icon: 'person-outline', label: 'Edit Profil', color: '#7c3f06', action: () => navigation.navigate('EditProfile') },
                 { icon: 'lock-closed-outline', label: 'Ubah Password', color: '#b87333', action: handleChangePassword },
                 { icon: 'card-outline', label: 'Metode Pembayaran', color: '#10b981', action: () => showFeatureAlert('Metode Pembayaran') },
-                { icon: 'location-outline', label: 'Alamat Tersimpan', color: '#5d3a1a', action: () => showFeatureAlert('Alamat Tersimpan') },
+                { icon: 'location-outline', label: 'Alamat Tersimpan', color: '#5d3a1a', action: () => navigation.navigate('AddressList') },
             ],
         },
 

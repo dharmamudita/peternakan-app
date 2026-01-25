@@ -98,6 +98,10 @@ const AnimalDetailScreen = ({ navigation, route }) => {
         return `${months} bulan`;
     };
 
+    if (!animal) {
+        return <View style={styles.container} />;
+    }
+
     // Helper untuk status UI
     const getStatusInfo = (status) => {
         switch (status) {
@@ -107,7 +111,7 @@ const AnimalDetailScreen = ({ navigation, route }) => {
         }
     };
 
-    const statusInfo = getStatusInfo(animal.healthStatus);
+    const statusInfo = getStatusInfo(animal.healthStatus || 'healthy');
 
     // ... (lanjut ke handleDeathReport dsb)
 

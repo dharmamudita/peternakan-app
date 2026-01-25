@@ -207,8 +207,10 @@ const CartScreen = ({ navigation }) => {
                         <TouchableOpacity
                             style={styles.checkoutBtn}
                             onPress={() => {
-                                if (Platform.OS === 'web') alert('Fitur Checkout akan segera hadir!');
-                                else Alert.alert('Checkout', 'Fitur Checkout akan segera hadir!');
+                                navigation.navigate('Checkout', {
+                                    cartItems: cart.items,
+                                    totalAmount: calculateTotal()
+                                });
                             }}
                         >
                             <Text style={styles.checkoutText}>Checkout ({cart.items.length})</Text>
