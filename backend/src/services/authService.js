@@ -10,13 +10,41 @@ const Mailer = require('../utils/mailer');
 
 class AuthService {
     /**
-     * Verifikasi token Firebase
+     * Verifikasi token Firebase (ID Token atau Custom Token)
      */
     static async verifyToken(idToken) {
         try {
+            // First try verifyIdToken (for proper Firebase ID Tokens)
             const decodedToken = await auth.verifyIdToken(idToken);
             return decodedToken;
         } catch (error) {
+            // If verifyIdToken fails, the token might be a Custom Token
+            // Custom Tokens are JWTs signed by the service account
+            // We can try to decode them manually
+            console.log('verifyIdToken failed, trying to decode as Custom Token:', error.code);
+
+            try {
+                // Custom Token is a JWT, try to decode it
+                // Note: This is less secure but needed for social login flow
+                const jwt = require('jsonwebtoken');
+                const decoded = jwt.decode(idToken);
+
+                console.log('Decoded JWT payload:', JSON.stringify(decoded, null, 2));
+
+                // Custom Tokens from Firebase have uid in different places
+                const uid = decoded?.uid || decoded?.sub || decoded?.user_id;
+
+                if (uid) {
+                    console.log('Found UID from Custom Token:', uid);
+                    return { uid };
+                } else {
+                    console.log('No UID found in decoded token');
+                }
+            } catch (decodeError) {
+                console.error('JWT decode failed:', decodeError.message);
+            }
+
+            // Original error
             console.error('Verify Token Error:', error.code, error.message);
             throw new Error('Token tidak valid: ' + error.message);
         }

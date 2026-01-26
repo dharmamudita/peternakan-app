@@ -15,6 +15,7 @@ class Shop {
         this.address = data.address || '';
         this.phoneNumber = data.phoneNumber || '';
         this.nik = data.nik || ''; // Untuk verifikasi
+        this.ktpImageUrl = data.ktpImageUrl || ''; // URL foto KTP untuk verifikasi
         this.bankAccount = data.bankAccount || { bank: '', number: '', holder: '' };
         this.status = data.status || 'PENDING'; // PENDING, VERIFIED, REJECTED, SUSPENDED
         this.rating = data.rating || 0;
@@ -43,6 +44,7 @@ class Shop {
             address: this.address,
             phoneNumber: this.phoneNumber,
             nik: this.nik,
+            ktpImageUrl: this.ktpImageUrl,
             bankAccount: this.bankAccount,
             status: this.status,
             rating: this.rating,
@@ -66,26 +68,38 @@ class Shop {
             const data = shop.toJSON();
             delete data.id; // Biarkan Firestore generate ID
 
-            console.log('[Shop.create] Saving to Firestore:', data);
-            const docRef = await db.collection('shops').add(data);
+            const cleanData = JSON.parse(JSON.stringify(data));
+            console.log('[Shop.create] Saving to Firestore:', cleanData);
+            const docRef = await db.collection('shops').add(cleanData);
             shop.id = docRef.id;
             console.log('[Shop.create] Success, ID:', shop.id);
             return shop;
         } catch (error) {
-            console.error('[Shop.create] Error:', error.message);
+            console.error('[Shop.create] FAILED:', error);
             throw error;
         }
     }
 
     static async getByUserId(userId) {
+        console.log('[Shop.getByUserId] Searching for userId:', userId, 'Type:', typeof userId);
+
         const snapshot = await db.collection('shops')
             .where('userId', '==', userId)
             .limit(1)
             .get();
 
-        if (snapshot.empty) return null;
+        console.log('[Shop.getByUserId] Found docs:', snapshot.size);
+
+        if (snapshot.empty) {
+            console.log('[Shop.getByUserId] No shop found for userId:', userId);
+            return null;
+        }
+
         const doc = snapshot.docs[0];
-        return new Shop({ id: doc.id, ...doc.data() });
+        const shopData = doc.data();
+        console.log('[Shop.getByUserId] Found shop:', doc.id, 'with storedUserId:', shopData.userId);
+
+        return new Shop({ id: doc.id, ...shopData });
     }
 
     static async getById(id) {
@@ -99,18 +113,6 @@ class Shop {
             .where('status', '==', 'PENDING')
             .get();
         return snapshot.docs.map(doc => new Shop({ id: doc.id, ...doc.data() }));
-    }
-
-    // Get shop by User ID
-    static async getByUserId(userId) {
-        const snapshot = await db.collection('shops')
-            .where('userId', '==', userId)
-            .limit(1)
-            .get();
-
-        if (snapshot.empty) return null;
-        const doc = snapshot.docs[0];
-        return new Shop({ id: doc.id, ...doc.data() });
     }
 
     static async getAllByStatus(status = null) {

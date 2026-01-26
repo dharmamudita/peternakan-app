@@ -13,12 +13,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { orderApi, shopApi, productApi, cartApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 const ProductDetailScreen = ({ navigation, route }) => {
     const insets = useSafeAreaInsets();
     const { product } = route.params || {};
+    const { user } = useAuth();
 
     // Animation Values (Standard RN Animated)
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -79,17 +81,25 @@ const ProductDetailScreen = ({ navigation, route }) => {
         const fetchShop = async () => {
             setLoadingShop(true);
             try {
+                let response = null;
                 if (product?.shopId) {
-                    const response = await shopApi.getById(product.shopId);
-                    if (response.data) setShop(response.data);
+                    response = await shopApi.getById(product.shopId);
                 } else if (product?.sellerId) {
                     // Fallback to fetch by Seller ID for older products
-                    console.log('Fetching shop by sellerId:', product.sellerId);
-                    const response = await shopApi.getByUserId(product.sellerId);
-                    if (response.data) setShop(response.data);
+                    response = await shopApi.getByUserId(product.sellerId);
+                }
+
+                if (response && response.data) {
+                    setShop(response.data);
                 }
             } catch (error) {
-                console.log('Error fetching shop:', error);
+                // Suppress 404/500 errors for missing shop info to keep console clean
+                // Just log a small warning or nothing
+                if (error.message && error.message.includes('404')) {
+                    console.warn('Shop info not found (might be deleted)');
+                } else {
+                    console.log('Info: Could not load shop details');
+                }
             } finally {
                 setLoadingShop(false);
             }
@@ -130,8 +140,17 @@ const ProductDetailScreen = ({ navigation, route }) => {
         });
     };
 
+    const isMyProduct = user && (
+        user.id === product.sellerId ||
+        (shop && user.id === shop.userId)
+    );
+
     const handleAddToCart = async () => {
         try {
+            if (isMyProduct) {
+                Alert.alert('Info', 'Anda tidak dapat membeli produk Anda sendiri');
+                return;
+            }
             await cartApi.addItem(product.id, 1);
             if (Platform.OS === 'android') {
                 ToastAndroid.show('Produk ditambahkan ke keranjang', ToastAndroid.SHORT);
@@ -364,26 +383,39 @@ const ProductDetailScreen = ({ navigation, route }) => {
 
             {/* Bottom Bar Fixed */}
             <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
-                <TouchableOpacity style={styles.cartButton} onPress={handleAddToCart}>
-                    <Ionicons name="cart-outline" size={24} color="#374151" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.buyButton, isBuying && { opacity: 0.7 }]}
-                    onPress={handleBuyNow}
-                    disabled={isBuying}
-                >
-                    <LinearGradient
-                        colors={['#b87333', '#964b00']}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                        style={styles.buyGradient}
+                {isMyProduct ? (
+                    <TouchableOpacity
+                        style={[styles.buyButton, { backgroundColor: '#f3f4f6' }]}
+                        onPress={() => navigation.navigate('AddEditProduct', { mode: 'edit', product })}
                     >
-                        {isBuying ? (
-                            <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                            <Text style={styles.buyText}>Beli Sekarang</Text>
-                        )}
-                    </LinearGradient>
-                </TouchableOpacity>
+                        <View style={[styles.buyGradient, { backgroundColor: '#f3f4f6' }]}>
+                            <Text style={[styles.buyText, { color: '#374151' }]}>Edit Produk Anda</Text>
+                        </View>
+                    </TouchableOpacity>
+                ) : (
+                    <>
+                        <TouchableOpacity style={styles.cartButton} onPress={handleAddToCart}>
+                            <Ionicons name="cart-outline" size={24} color="#374151" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.buyButton, isBuying && { opacity: 0.7 }]}
+                            onPress={handleBuyNow}
+                            disabled={isBuying}
+                        >
+                            <LinearGradient
+                                colors={['#b87333', '#964b00']}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                style={styles.buyGradient}
+                            >
+                                {isBuying ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <Text style={styles.buyText}>Beli Sekarang</Text>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </>
+                )}
             </View>
         </View>
     );

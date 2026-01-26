@@ -122,23 +122,60 @@ class UserProgress {
     }
 
     static async completeLesson(userId, courseId, lessonId, timeSpent = 0) {
-        const progress = await UserProgress.getByUserAndCourse(userId, courseId);
-        if (!progress) return null;
+        // 1. Get Progress
+        const snapshot = await db.collection(COLLECTIONS.USER_PROGRESS)
+            .where('userId', '==', userId)
+            .where('courseId', '==', courseId)
+            .limit(1)
+            .get();
 
-        const completedLessons = progress.completedLessons || [];
+        if (snapshot.empty) return null;
+
+        const doc = snapshot.docs[0];
+        const progressData = doc.data();
+        const progressId = doc.id;
+
+        const completedLessons = progressData.completedLessons || [];
+
+        // Add lesson if not already completed
         if (!completedLessons.includes(lessonId)) {
             completedLessons.push(lessonId);
         }
 
-        await db.collection(COLLECTIONS.USER_PROGRESS).doc(progress.id).update({
+        // 2. Calculate Percentage
+        const Course = require('./Course');
+        const course = await Course.getById(courseId);
+        let progressPercentage = 0;
+        let isCompleted = false;
+
+        if (course && course.lessons && course.lessons.length > 0) {
+            progressPercentage = Math.round((completedLessons.length / course.lessons.length) * 100);
+            if (progressPercentage > 100) progressPercentage = 100;
+            if (progressPercentage === 100) isCompleted = true;
+        } else {
+            // Fallback if no lessons in course metadata
+            progressPercentage = completedLessons.length > 0 ? 100 : 0;
+        }
+
+        const updateData = {
             completedLessons,
             currentLessonId: lessonId,
-            totalTimeSpent: progress.totalTimeSpent + timeSpent,
+            totalTimeSpent: (progressData.totalTimeSpent || 0) + timeSpent,
+            progressPercentage,
+            isCompleted,
+            completedAt: isCompleted && !progressData.isCompleted ? new Date() : progressData.completedAt,
             lastAccessedAt: new Date(),
             updatedAt: new Date(),
-        });
+        };
 
-        return await UserProgress.getByUserAndCourse(userId, courseId);
+        await db.collection(COLLECTIONS.USER_PROGRESS).doc(progressId).update(updateData);
+
+        // Return updated object
+        return new UserProgress({
+            id: progressId,
+            ...progressData,
+            ...updateData
+        });
     }
 
     static async updateProgress(id, progressPercentage, totalLessons) {

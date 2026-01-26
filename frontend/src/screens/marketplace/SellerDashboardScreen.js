@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     statValue: { fontSize: 24, fontWeight: '800', color: '#111827', marginBottom: 2 },
     statLabel: { fontSize: 12, color: '#6b7280' },
     menuGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-    menuItemWrapper: { width: (width - SIZES.padding * 2 - 24) / 3 },
+    menuItemWrapper: { width: (width - SIZES.padding * 2 - 12) / 2 },
     menuItem: { backgroundColor: '#ffffff', borderRadius: 20, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#f0ebe3', ...SHADOWS.small },
     menuIconGradient: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
     menuBadge: { position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: 9, backgroundColor: '#dc2626', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#ffffff' },

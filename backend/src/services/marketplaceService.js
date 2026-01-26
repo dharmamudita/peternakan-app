@@ -291,6 +291,11 @@ class MarketplaceService {
                 throw new Error('Produk tidak ditemukan');
             }
 
+            // Security: Prevent self-buying (Rating Manipulation)
+            if (product.sellerId === userId) {
+                throw new Error('Anda tidak dapat membeli produk Anda sendiri (Anti-Fraud Protection).');
+            }
+
             if (product.status !== PRODUCT_STATUS.ACTIVE) {
                 throw new Error('Produk tidak tersedia');
             }

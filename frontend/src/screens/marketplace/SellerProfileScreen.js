@@ -87,7 +87,7 @@ const SellerProfileScreen = ({ navigation, route }) => {
             }
 
             if (!currentShopId) {
-                console.log('No Shop ID found');
+                console.log('Info: User has no shop profile');
                 setLoading(false);
                 return;
             }
@@ -115,7 +115,7 @@ const SellerProfileScreen = ({ navigation, route }) => {
             setProducts(productsData);
 
         } catch (error) {
-            console.error('Fetch shop data error:', error);
+            console.warn('Fetch shop data warning:', error.message);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -142,6 +142,27 @@ const SellerProfileScreen = ({ navigation, route }) => {
         Alert.alert('Ditolak', 'Pengajuan verifikasi toko ditolak.');
         navigation.goBack();
     };
+
+    // Render "Shop Not Found" if loading finished but no shop data
+    if (!loading && !shop && !sellerData) {
+        return (
+            <View style={styles.container}>
+                <View style={[styles.customHeader, { paddingTop: insets.top, backgroundColor: COLORS.primary }]}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitleWhite}>Profil Penjual</Text>
+                    <View style={{ width: 40 }} />
+                </View>
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="storefront-outline" size={64} color="#d1d5db" />
+                    <Text style={{ marginTop: 16, fontSize: 16, color: '#6b7280' }}>
+                        Toko tidak ditemukan atau sudah tidak aktif.
+                    </Text>
+                </View>
+            </View>
+        );
+    }
 
 
 
@@ -247,7 +268,7 @@ const SellerProfileScreen = ({ navigation, route }) => {
                                     onPress={() => navigation.push('ProductDetail', { product: item })}
                                 >
                                     <Image
-                                        source={{ uri: item.images && item.images.length > 0 ? item.images[0] : 'https://via.placeholder.com/150' }}
+                                        source={{ uri: item.images && item.images.length > 0 ? item.images[0] : 'https://placehold.co/150' }}
                                         style={styles.cardImg}
                                         resizeMode="cover"
                                     />

@@ -45,8 +45,8 @@ const AIResultScreen = ({ route, navigation }) => {
         return (
             <>
                 {/* Status Card */}
-                <View style={[styles.statusCard, { backgroundColor: data.color + '15' }]}>
-                    <View style={[styles.statusBadge, { backgroundColor: data.color }]}>
+                <View style={[styles.statusCard, { backgroundColor: (data.color || (data.status.includes('Sakit') ? '#dc2626' : '#10b981')) + '15' }]}>
+                    <View style={[styles.statusBadge, { backgroundColor: data.color || (data.status.includes('Sakit') ? '#dc2626' : '#10b981') }]}>
                         <Text style={styles.statusBadgeText}>{data.status}</Text>
                     </View>
                     <Text style={styles.confidenceText}>
@@ -59,14 +59,14 @@ const AIResultScreen = ({ route, navigation }) => {
                                 style={[
                                     styles.riskScoreFill,
                                     {
-                                        width: `${data.risk_score * 10}%`,
-                                        backgroundColor: data.color,
+                                        width: `${(data.risk_score || (data.status.includes('Sehat') ? 1 : 8)) * 10}%`,
+                                        backgroundColor: data.color || (data.status.includes('Sakit') ? '#dc2626' : '#10b981'),
                                     },
                                 ]}
                             />
                         </View>
-                        <Text style={[styles.riskScoreValue, { color: data.color }]}>
-                            {data.risk_score}/10
+                        <Text style={[styles.riskScoreValue, { color: data.color || (data.status.includes('Sakit') ? '#dc2626' : '#10b981') }]}>
+                            {data.risk_score || (data.status.includes('Sehat') ? 1 : 8)}/10
                         </Text>
                     </View>
                 </View>
@@ -277,7 +277,7 @@ const AIResultScreen = ({ route, navigation }) => {
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.actionButtonPrimary}
-                        onPress={() => navigation.navigate('Home')}
+                        onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })}
                     >
                         <LinearGradient
                             colors={[COLORS.primary, COLORS.primaryDark]}

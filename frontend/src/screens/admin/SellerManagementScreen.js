@@ -4,13 +4,30 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, StatusBar, Alert, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    FlatList,
+    TouchableOpacity,
+    TextInput,
+    StatusBar,
+    Alert,
+    ActivityIndicator,
+    RefreshControl,
+    Platform,
+    Modal,
+    Image,
+    Dimensions
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../../constants/theme';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp, FadeIn } from 'react-native-reanimated';
 import { shopApi } from '../../services/api';
 import { useFocusEffect } from '@react-navigation/native';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const SellerManagementScreen = ({ navigation }) => {
     const insets = useSafeAreaInsets();
@@ -19,6 +36,10 @@ const SellerManagementScreen = ({ navigation }) => {
     const [shops, setShops] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+
+    // KTP Modal State
+    const [ktpModalVisible, setKtpModalVisible] = useState(false);
+    const [selectedShop, setSelectedShop] = useState(null);
 
     const fetchShops = async (statusFilter = filterStatus) => {
         try {
@@ -69,6 +90,7 @@ const SellerManagementScreen = ({ navigation }) => {
                 } else {
                     Alert.alert('Berhasil', `Toko berhasil ${status === 'VERIFIED' ? 'diverifikasi' : 'ditolak'}`);
                 }
+                setKtpModalVisible(false);
                 fetchShops(); // Refresh list
             } catch (error) {
                 const errMsg = error.message || 'Terjadi kesalahan';
@@ -94,6 +116,11 @@ const SellerManagementScreen = ({ navigation }) => {
                 ]
             );
         }
+    };
+
+    const openKtpModal = (shop) => {
+        setSelectedShop(shop);
+        setKtpModalVisible(true);
     };
 
     // Client-side filter hanya untuk search (status sudah di-filter dari server)
@@ -191,6 +218,18 @@ const SellerManagementScreen = ({ navigation }) => {
                     </View>
                 </View>
 
+                {/* KTP Preview Button */}
+                <TouchableOpacity
+                    style={styles.ktpButton}
+                    onPress={() => openKtpModal(item)}
+                >
+                    <View style={styles.ktpButtonContent}>
+                        <Ionicons name="id-card-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.ktpButtonText}>Lihat Foto KTP</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                </TouchableOpacity>
+
                 {/* Action Buttons for Pending */}
                 {item.status === 'PENDING' && (
                     <View style={styles.actionButtons}>
@@ -212,6 +251,114 @@ const SellerManagementScreen = ({ navigation }) => {
                 )}
             </View>
         </Animated.View>
+    );
+
+    // KTP Modal Component
+    const renderKtpModal = () => (
+        <Modal
+            visible={ktpModalVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setKtpModalVisible(false)}
+        >
+            <View style={styles.modalOverlay}>
+                <Animated.View
+                    style={styles.modalContent}
+                    entering={FadeIn.duration(300)}
+                >
+                    {/* Modal Header */}
+                    <View style={styles.modalHeader}>
+                        <View style={styles.modalTitleRow}>
+                            <Ionicons name="id-card" size={24} color={COLORS.primary} />
+                            <Text style={styles.modalTitle}>Verifikasi KTP</Text>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.modalCloseButton}
+                            onPress={() => setKtpModalVisible(false)}
+                        >
+                            <Ionicons name="close" size={24} color="#6b7280" />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Seller Info */}
+                    {selectedShop && (
+                        <View style={styles.modalSellerInfo}>
+                            <View style={styles.modalInfoRow}>
+                                <Text style={styles.modalInfoLabel}>Nama Toko:</Text>
+                                <Text style={styles.modalInfoValue}>{selectedShop.name}</Text>
+                            </View>
+                            <View style={styles.modalInfoRow}>
+                                <Text style={styles.modalInfoLabel}>NIK:</Text>
+                                <Text style={styles.modalInfoValue}>{selectedShop.nik}</Text>
+                            </View>
+                            <View style={styles.modalInfoRow}>
+                                <Text style={styles.modalInfoLabel}>Alamat:</Text>
+                                <Text style={styles.modalInfoValue} numberOfLines={2}>{selectedShop.address}</Text>
+                            </View>
+                            <View style={styles.modalInfoRow}>
+                                <Text style={styles.modalInfoLabel}>No. HP:</Text>
+                                <Text style={styles.modalInfoValue}>{selectedShop.phoneNumber}</Text>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* KTP Image */}
+                    <View style={styles.ktpImageContainer}>
+                        <Text style={styles.ktpImageLabel}>Foto KTP:</Text>
+                        {selectedShop?.ktpImageUrl ? (
+                            <Image
+                                source={{ uri: selectedShop.ktpImageUrl }}
+                                style={styles.ktpImage}
+                                resizeMode="contain"
+                            />
+                        ) : (
+                            <View style={styles.noKtpContainer}>
+                                <Ionicons name="image-outline" size={48} color="#d1d5db" />
+                                <Text style={styles.noKtpText}>Foto KTP tidak tersedia</Text>
+                            </View>
+                        )}
+                    </View>
+
+                    {/* Action Buttons in Modal (for PENDING) */}
+                    {selectedShop?.status === 'PENDING' && (
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={[styles.modalActionBtn, styles.modalRejectBtn]}
+                                onPress={() => handleVerify(selectedShop, 'REJECTED')}
+                            >
+                                <Ionicons name="close-circle" size={20} color="#dc2626" />
+                                <Text style={styles.modalRejectText}>Tolak Pendaftaran</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalActionBtn, styles.modalApproveBtn]}
+                                onPress={() => handleVerify(selectedShop, 'VERIFIED')}
+                            >
+                                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                                <Text style={styles.modalApproveText}>Setujui & Verifikasi</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {/* Status Badge for Non-Pending */}
+                    {selectedShop?.status !== 'PENDING' && (
+                        <View style={[styles.modalStatusBadge, {
+                            backgroundColor: selectedShop?.status === 'VERIFIED' ? '#dcfce7' : '#fee2e2',
+                        }]}>
+                            <Ionicons
+                                name={selectedShop?.status === 'VERIFIED' ? 'checkmark-circle' : 'close-circle'}
+                                size={20}
+                                color={selectedShop?.status === 'VERIFIED' ? '#15803d' : '#dc2626'}
+                            />
+                            <Text style={[styles.modalStatusText, {
+                                color: selectedShop?.status === 'VERIFIED' ? '#15803d' : '#dc2626',
+                            }]}>
+                                {selectedShop?.status === 'VERIFIED' ? 'Sudah Terverifikasi' : 'Ditolak'}
+                            </Text>
+                        </View>
+                    )}
+                </Animated.View>
+            </View>
+        </Modal>
     );
 
     if (loading) {
@@ -246,6 +393,8 @@ const SellerManagementScreen = ({ navigation }) => {
                     </View>
                 )}
             />
+
+            {renderKtpModal()}
         </View>
     );
 };
@@ -314,6 +463,27 @@ const styles = StyleSheet.create({
         alignItems: 'center', justifyContent: 'center',
     },
 
+    // KTP Button
+    ktpButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: `${COLORS.primary}10`,
+        borderRadius: 12,
+        padding: 14,
+        marginTop: 16,
+    },
+    ktpButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    ktpButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: COLORS.primary,
+    },
+
     actionButtons: {
         flexDirection: 'row',
         marginTop: 16,
@@ -342,6 +512,146 @@ const styles = StyleSheet.create({
 
     emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 80 },
     emptyText: { marginTop: 16, color: '#9ca3af', fontSize: 16, textAlign: 'center' },
+
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        width: '100%',
+        maxWidth: 500,
+        maxHeight: SCREEN_HEIGHT * 0.85,
+        overflow: 'hidden',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f3f4f6',
+    },
+    modalTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    modalCloseButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#f3f4f6',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    modalSellerInfo: {
+        padding: 16,
+        backgroundColor: '#f9fafb',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f3f4f6',
+    },
+    modalInfoRow: {
+        flexDirection: 'row',
+        marginBottom: 8,
+    },
+    modalInfoLabel: {
+        width: 80,
+        fontSize: 13,
+        color: '#6b7280',
+    },
+    modalInfoValue: {
+        flex: 1,
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#111827',
+    },
+    ktpImageContainer: {
+        padding: 16,
+    },
+    ktpImageLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#374151',
+        marginBottom: 12,
+    },
+    ktpImage: {
+        width: '100%',
+        height: 200,
+        borderRadius: 12,
+        backgroundColor: '#f3f4f6',
+    },
+    noKtpContainer: {
+        height: 200,
+        borderRadius: 12,
+        backgroundColor: '#f9fafb',
+        borderWidth: 2,
+        borderColor: '#e5e7eb',
+        borderStyle: 'dashed',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    noKtpText: {
+        marginTop: 12,
+        fontSize: 14,
+        color: '#9ca3af',
+    },
+    modalActions: {
+        flexDirection: 'row',
+        gap: 12,
+        padding: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#f3f4f6',
+    },
+    modalActionBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 12,
+        gap: 8,
+    },
+    modalRejectBtn: {
+        backgroundColor: '#fee2e2',
+    },
+    modalApproveBtn: {
+        backgroundColor: '#15803d',
+    },
+    modalRejectText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#dc2626',
+    },
+    modalApproveText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#fff',
+    },
+    modalStatusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginHorizontal: 16,
+        marginBottom: 16,
+        paddingVertical: 12,
+        borderRadius: 12,
+        gap: 8,
+    },
+    modalStatusText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
 });
 
 export default SellerManagementScreen;

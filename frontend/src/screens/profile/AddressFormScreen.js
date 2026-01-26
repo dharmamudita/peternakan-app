@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS, SIZES } from '../../constants/theme';
@@ -78,7 +78,10 @@ const AddressFormScreen = ({ navigation, route }) => {
                 <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.formContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                contentContainerStyle={[styles.formContent, { paddingBottom: 100 }]}
+                showsVerticalScrollIndicator={false}
+            >
                 <Text style={styles.sectionTitle}>Kontak</Text>
 
                 <View style={styles.inputGroup}>
@@ -202,7 +205,11 @@ const AddressFormScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#ffffff' },
+    container: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+        ...(Platform.OS === 'web' ? { flex: 0, height: 'auto', minHeight: '100vh' } : {})
+    },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
     headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
     backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },

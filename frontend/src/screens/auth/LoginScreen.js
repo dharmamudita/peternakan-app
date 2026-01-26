@@ -63,19 +63,30 @@ const LoginScreen = ({ navigation }) => {
 
     const exchangeAndLogin = async (rawToken, user) => {
         try {
+            // Backend mengirimkan Custom Token yang dibuat dengan auth.createCustomToken()
+            // Kita perlu menukarnya menjadi ID Token menggunakan Firebase REST API
+
             // Coba tukar custom token jadi ID Token
             const idToken = await authApi.exchangeCustomToken(rawToken);
             console.log('Token exchanged successfully');
             await login(idToken, user);
-            // navigation.replace('MainTabs'); // Handled by AuthContext state change
         } catch (exchangeError) {
-            console.warn('Token exchange failed, trying with direct token:', exchangeError.message);
-            // Tampilkan alert agar user tahu ada masalah (bisa jadi config Firebase salah)
-            showAlert('Peringatan Login', `Verifikasi token Google gagal (${exchangeError.message}). Mencoba masuk dengan metode alternatif...`);
+            console.warn('Token exchange failed:', exchangeError.message);
 
-            // Fallback: coba pakai token langsung (siapa tahu sudah ID Token)
-            await login(rawToken, user);
-            // navigation.replace('MainTabs'); // Handled by AuthContext state change
+            // Fallback: Simpan custom token langsung
+            // Backend akan mencoba memverifikasi token ini
+            // Jika backend juga menggunakan verifyIdToken, maka akan gagal
+            // Jika backend bisa decode custom token atau bypass untuk social login, akan berhasil
+
+            try {
+                // Coba login dengan token langsung (mungkin sudah ID Token dari user yang existing)
+                await login(rawToken, user);
+                console.log('Login with direct token succeeded');
+            } catch (directLoginError) {
+                console.error('Both token methods failed');
+                setErrors({ general: 'Gagal melakukan autentikasi. Silakan coba lagi.' });
+                showAlert('Login Gagal', 'Terjadi masalah dengan autentikasi. Silakan coba login lagi.');
+            }
         }
     };
 

@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -144,9 +144,19 @@ const EducationScreen = ({ navigation }) => {
                                         style={styles.card}
                                         onPress={() => navigation.navigate('CourseDetail', { courseId: course.id })}
                                     >
-                                        <LinearGradient colors={['#964b00', '#7c3f06']} style={styles.cardIcon}>
-                                            <Ionicons name="play-circle" size={24} color="#fff" />
-                                        </LinearGradient>
+                                        <View style={styles.cardImageContainer}>
+                                            {course.thumbnailUrl || course.thumbnail ? (
+                                                <Image
+                                                    source={{ uri: course.thumbnailUrl || course.thumbnail }}
+                                                    style={styles.cardImage}
+                                                    resizeMode="cover"
+                                                />
+                                            ) : (
+                                                <LinearGradient colors={['#964b00', '#7c3f06']} style={styles.cardIconFallback}>
+                                                    <Ionicons name="play-circle" size={24} color="#fff" />
+                                                </LinearGradient>
+                                            )}
+                                        </View>
                                         <View style={styles.cardContent}>
                                             <Text style={styles.cardTitle}>{course.title}</Text>
                                             <Text style={styles.cardMeta}>
@@ -240,6 +250,9 @@ const styles = StyleSheet.create({
     section: { paddingHorizontal: SIZES.padding },
     sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
     card: { backgroundColor: '#ffffff', borderRadius: 20, flexDirection: 'row', alignItems: 'center', padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#f0ebe3', ...SHADOWS.small },
+    cardImageContainer: { width: 60, height: 60, borderRadius: 16, overflow: 'hidden', marginRight: 14, backgroundColor: '#f3f4f6' },
+    cardImage: { width: '100%', height: '100%' },
+    cardIconFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
     cardIcon: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
     cardContent: { flex: 1 },
     cardTitle: { fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 4 },

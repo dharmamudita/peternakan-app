@@ -12,7 +12,10 @@ import { COLORS, SIZES, SHADOWS } from '../../constants/theme';
 import { animalApi } from '../../services/api';
 
 const AnimalDetailScreen = ({ navigation, route }) => {
-    const { animal: initialAnimal } = route.params;
+    // Safety check for route.params
+    const params = route.params || {};
+    const initialAnimal = params.animal || null;
+
     const insets = useSafeAreaInsets();
     const [animal, setAnimal] = useState(initialAnimal);
     const [healthRecords, setHealthRecords] = useState([]);
@@ -25,10 +28,19 @@ const AnimalDetailScreen = ({ navigation, route }) => {
     });
 
     useEffect(() => {
-        loadData();
+        if (animal?.id) {
+            loadData();
+        } else if (!animal) {
+            // Handle case where no animal data passed
+            Alert.alert('Error', 'Data hewan tidak ditemukan', [
+                { text: 'Kembali', onPress: () => navigation.goBack() }
+            ]);
+        }
     }, []);
 
     const loadData = async () => {
+        if (!animal?.id) return;
+
         try {
             const [animalRes, recordsRes] = await Promise.all([
                 animalApi.getById(animal.id),

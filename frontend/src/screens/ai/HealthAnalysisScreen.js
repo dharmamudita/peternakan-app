@@ -147,13 +147,15 @@ const HealthAnalysisScreen = ({ navigation }) => {
                     end={{ x: 1, y: 1 }}
                     style={styles.infoCard}
                 >
-                    <View style={styles.infoIconContainer}>
-                        <Ionicons name="analytics" size={32} color="#fff" />
+                    <View style={{ alignItems: 'center', width: '100%' }}>
+                        <View style={styles.infoIconContainer}>
+                            <Ionicons name="analytics" size={32} color="#fff" />
+                        </View>
+                        <Text style={styles.infoTitle}>Prediksi Kesehatan Hewan</Text>
+                        <Text style={styles.infoText}>
+                            Menggunakan teknologi Data Mining untuk menganalisis kondisi kesehatan hewan berdasarkan parameter yang dimasukkan
+                        </Text>
                     </View>
-                    <Text style={styles.infoTitle}>Prediksi Kesehatan Hewan</Text>
-                    <Text style={styles.infoText}>
-                        Menggunakan teknologi Data Mining untuk menganalisis kondisi kesehatan hewan berdasarkan parameter yang dimasukkan
-                    </Text>
                 </LinearGradient>
 
                 {/* Animal Type Selection */}
@@ -311,10 +313,10 @@ const HealthAnalysisScreen = ({ navigation }) => {
                         {loading ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                                 <Ionicons name="pulse" size={24} color="#fff" />
                                 <Text style={styles.analyzeButtonText}>Analisis Kesehatan</Text>
-                            </>
+                            </View>
                         )}
                     </LinearGradient>
                 </TouchableOpacity>

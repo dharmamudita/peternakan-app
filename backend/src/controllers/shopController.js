@@ -2,29 +2,69 @@
  * Shop Controller
  */
 const Shop = require('../models/Shop');
-const { User } = require('../models'); // Assuming User model exists
+const User = require('../models/User'); // Import directly to avoid circular dependency
 const { asyncHandler } = require('../middlewares');
 const { success, created, badRequest, notFound } = require('../utils/responseHelper');
 
 // Daftarkan Toko Baru
 const registerShop = asyncHandler(async (req, res) => {
-    const userId = req.user.id;
-    const { name, description, address, phoneNumber, nik } = req.body;
+    console.log('[registerShop] Request received');
+    console.log('[registerShop] req.user:', req.user?.id, req.user?.email);
+    console.log('[registerShop] req.body:', JSON.stringify(req.body, null, 2));
 
-    if (!name || !address || !phoneNumber) {
-        return badRequest(res, 'Nama toko, alamat, dan nomor HP wajib diisi');
+    const userId = req.user?.id;
+
+    if (!userId) {
+        console.error('[registerShop] No user ID found in request');
+        return badRequest(res, 'User tidak terautentikasi dengan benar');
     }
 
-    const shop = await Shop.create({
-        userId,
-        name,
-        description,
-        address,
-        phoneNumber,
-        nik
-    });
+    const { name, description, address, phoneNumber, nik, ktpImageUrl } = req.body;
 
-    return created(res, shop.toJSON(), 'Pendaftaran toko berhasil. Menunggu verifikasi admin.');
+    if (!name || !address || !phoneNumber || !nik) {
+        console.log('[registerShop] Validation failed: missing required fields');
+        return badRequest(res, 'Nama toko, alamat, nomor HP, dan NIK wajib diisi');
+    }
+
+    if (!ktpImageUrl) {
+        console.log('[registerShop] Validation failed: no KTP image URL');
+        return badRequest(res, 'Foto KTP wajib diupload untuk verifikasi');
+    }
+
+    console.log('[registerShop] Payload valid:', { userId, name, address, phoneNumber, nik, ktpImageUrl: ktpImageUrl ? 'present' : 'none' });
+
+    try {
+        const shop = await Shop.create({
+            userId,
+            name,
+            description,
+            address,
+            phoneNumber,
+            nik,
+            ktpImageUrl,
+            status: 'PENDING' // Default: Menunggu verifikasi admin
+        });
+
+        console.log('[registerShop] Success:', shop.id);
+        return created(res, shop.toJSON(), 'Pendaftaran toko berhasil. Menunggu verifikasi admin.');
+    } catch (err) {
+        console.error('[registerShop] Error creating shop:', err.message);
+        console.error('[registerShop] Error stack:', err.stack);
+
+        if (err.message.includes('User sudah memiliki toko')) {
+            return res.status(409).json({
+                success: false,
+                message: 'User sudah memiliki toko. Tidak bisa mendaftar lagi.'
+            });
+        }
+
+        // Return a more detailed error message for debugging
+        return res.status(500).json({
+            success: false,
+            message: 'Gagal mendaftarkan toko',
+            error: err.message
+        });
+    }
 });
 
 // Get Toko Saya

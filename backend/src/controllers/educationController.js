@@ -296,7 +296,7 @@ const getEnrolledCourses = asyncHandler(async (req, res) => {
  */
 const getCourseProgress = asyncHandler(async (req, res) => {
     const progress = await EducationService.getUserProgress(req.user.id, req.params.courseId);
-    return success(res, progress.toJSON(), 'Progress berhasil diambil');
+    return success(res, progress, 'Progress berhasil diambil');
 });
 
 /**

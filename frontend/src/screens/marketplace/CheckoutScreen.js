@@ -157,7 +157,7 @@ const CheckoutScreen = ({ navigation, route }) => {
                     {cartItems.map((item, index) => (
                         <View key={index} style={styles.itemCard}>
                             <Image
-                                source={{ uri: item.product?.images?.[0] || 'https://via.placeholder.com/80' }}
+                                source={{ uri: item.product?.images?.[0] || 'https://placehold.co/80' }}
                                 style={styles.itemImage}
                             />
                             <View style={styles.itemInfo}>

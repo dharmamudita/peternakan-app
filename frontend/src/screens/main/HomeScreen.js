@@ -301,7 +301,7 @@ const HomeScreen = ({ navigation }) => {
                                     onPress={() => navigation.navigate('CourseDetail', { courseId: course.courseId || course.id })}
                                 >
                                     <Image
-                                        source={{ uri: course.thumbnail || 'https://via.placeholder.com/150' }}
+                                        source={{ uri: course.thumbnail || 'https://placehold.co/150' }}
                                         style={styles.courseImage}
                                     />
                                     <View style={styles.courseContent}>
@@ -338,7 +338,7 @@ const HomeScreen = ({ navigation }) => {
                                         onPress={() => navigation.navigate('AnimalDetail', { animalId: animal.id })}
                                     >
                                         <Image
-                                            source={{ uri: animal.photoUrl || 'https://via.placeholder.com/150' }}
+                                            source={{ uri: animal.photoUrl || 'https://placehold.co/150' }}
                                             style={[styles.activityIcon, { backgroundColor: '#f0f0f0', borderRadius: 12 }]}
                                         />
                                         <View style={styles.activityContent}>

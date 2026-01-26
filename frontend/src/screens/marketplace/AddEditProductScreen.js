@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     contentScroll: {
-        flex: 1,
+        ...(Platform.OS === 'web' ? {} : { flex: 1 }),
     },
     contentContainer: {
         padding: 20,

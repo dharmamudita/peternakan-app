@@ -210,7 +210,7 @@ const EducationManagementScreen = ({ navigation }) => {
     const renderItem = ({ item }) => (
         <View style={styles.card}>
             <Image
-                source={{ uri: item.thumbnail || 'https://via.placeholder.com/150' }}
+                source={{ uri: item.thumbnail || 'https://placehold.co/150' }}
                 style={styles.cardImage}
             />
             <View style={styles.cardContent}>

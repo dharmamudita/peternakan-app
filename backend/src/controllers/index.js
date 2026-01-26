@@ -9,6 +9,7 @@ const marketplaceController = require('./marketplaceController');
 const educationController = require('./educationController');
 const uploadController = require('./uploadController');
 const notificationController = require('./notificationController');
+const shopController = require('./shopController');
 
 module.exports = {
     authController,
@@ -20,4 +21,5 @@ module.exports = {
     addressController: require('./addressController'),
     reportController: require('./reportController'),
     aiController: require('./aiController'),
+    shopController,
 };

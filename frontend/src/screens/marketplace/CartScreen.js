@@ -117,7 +117,7 @@ const CartScreen = ({ navigation }) => {
             <View style={styles.cartItem}>
                 {/* Image */}
                 <Image
-                    source={{ uri: product.images && product.images[0] ? product.images[0] : 'https://via.placeholder.com/100' }}
+                    source={{ uri: product.images && product.images[0] ? product.images[0] : 'https://placehold.co/100' }}
                     style={styles.itemImage}
                 />
 
@@ -223,7 +223,11 @@ const CartScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+        ...(Platform.OS === 'web' ? { flex: 0, height: 'auto', minHeight: '100vh' } : {})
+    },
     center: { justifyContent: 'center', alignItems: 'center' },
     header: {
         flexDirection: 'row',

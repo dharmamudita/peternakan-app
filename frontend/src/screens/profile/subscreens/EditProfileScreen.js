@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Image, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Image, TouchableOpacity, Alert, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -137,7 +137,7 @@ const EditProfileScreen = ({ navigation }) => {
                 <View style={{ width: 40 }} />
             </View>
 
-            <View style={styles.content}>
+            <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.avatarSection}>
                     <TouchableOpacity onPress={handlePickImage} style={styles.avatarContainer}>
                         {selectedImage ? (
@@ -183,13 +183,17 @@ const EditProfileScreen = ({ navigation }) => {
                         <Text style={styles.saveBtnText}>Simpan Perubahan</Text>
                     )}
                 </TouchableOpacity>
-            </View>
+            </ScrollView>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#ffffff' },
+    container: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+        ...(Platform.OS === 'web' ? { flex: 0, height: 'auto', minHeight: '100vh' } : {})
+    },
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: 20, paddingBottom: 20, backgroundColor: '#ffffff',

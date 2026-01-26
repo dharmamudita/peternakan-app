@@ -129,7 +129,7 @@ const MyProductsScreen = ({ navigation }) => {
                         {products.map((item) => (
                             <View key={item.id} style={styles.card}>
                                 <Image
-                                    source={{ uri: item.images && item.images.length > 0 ? item.images[0] : 'https://via.placeholder.com/300' }}
+                                    source={{ uri: item.images && item.images.length > 0 ? item.images[0] : 'https://placehold.co/300' }}
                                     style={styles.cardImage}
                                 />
                                 <View style={styles.cardContent}>

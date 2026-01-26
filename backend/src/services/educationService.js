@@ -402,12 +402,30 @@ class EducationService {
     static async getUserProgress(userId, courseId) {
         try {
             const progress = await UserProgress.getByUserAndCourse(userId, courseId);
+
+            // If not found, return a default "not enrolled" object instead of error
+            // This prevents 500 errors in frontend when checking status
             if (!progress) {
-                throw new Error('Anda belum terdaftar di kursus ini');
+                return {
+                    userId,
+                    courseId,
+                    enrolled: false,
+                    progress: 0,
+                    completedLessons: [],
+                    isCompleted: false
+                };
             }
-            return progress;
+
+            return { ...progress.toJSON(), enrolled: true };
         } catch (error) {
-            throw error;
+            console.error('Get progress error:', error);
+            // Return safe default instead of crashing
+            return {
+                userId,
+                courseId,
+                enrolled: false,
+                progress: 0
+            };
         }
     }
 
